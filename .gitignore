@@ -16,3 +16,6 @@ vendor/
 
 # config file
 config.yml
+
+# binary
+crypto-triangular-arbitrage-monitor
