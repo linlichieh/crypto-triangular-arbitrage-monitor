@@ -8,7 +8,13 @@ import (
 
 func main() {
 	loadConfig()
-	connect()
+	tri := initTri()
+	// TODO DEBUG
+	tri.printAll()
+	messenger := initMessenger()
+	messenger.setTri(tri)
+	go messenger.process()
+	connectToBybit(messenger)
 }
 
 func loadConfig() {

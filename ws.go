@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -15,26 +14,7 @@ type SubscribeMessage struct {
 	Args []string `json:"args"`
 }
 
-type KlineData struct {
-	Start      int64  `json:"start"`
-	Timestamp  int64  `json:"timestamp"`
-	Symbol     string `json:"symbol"`
-	Interval   string `json:"interval"`
-	OpenPrice  string `json:"open"`
-	ClosePrice string `json:"close"`
-	HighPrice  string `json:"high"`
-	LowPrice   string `json:"low"`
-	Volume     string `json:"volume"`
-	Turnover   string `json:"turnover"`
-}
-
-type KlineMessage struct {
-	Topic string      `json:"topic"`
-	Type  string      `json:"type"`
-	Data  []KlineData `json:"data"`
-}
-
-func connect() {
+func connectToBybit(messenger *Messenger) {
 	// Connect to Bybit Testnet
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("MAINNET_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
@@ -46,7 +26,10 @@ func connect() {
 	subscribePayload := SubscribeMessage{
 		Op: "subscribe",
 		Args: []string{
-			"kline.1.BTCUSDT",
+			// "kline.1.BTCUSDT",
+			"orderbook.1.BTCUSDT",
+			"orderbook.1.ETHUSDT",
+			"orderbook.1.ETHBTC",
 		},
 	}
 
@@ -68,14 +51,15 @@ func connect() {
 			continue
 		}
 
-		var klineMsg KlineMessage
-		if err := json.Unmarshal(message, &klineMsg); err != nil {
+		var orderbookMsg OrderbookMessage
+		if err := json.Unmarshal(message, &orderbookMsg); err != nil {
 			log.Printf("Error parsing JSON: %v", err)
 			continue
 		}
-		if len(klineMsg.Data) > 0 {
-			t := time.Unix(0, klineMsg.Data[0].Timestamp*int64(time.Millisecond))
-			fmt.Printf("[%s] %s %s\n", t.Format("2006-01-02 15:04:05"), klineMsg.Topic, klineMsg.Data[0].ClosePrice)
-		}
+		messenger.OrderbookMessageChan <- &orderbookMsg
 	}
+}
+
+func msToTime(ms int64) time.Time {
+	return time.Unix(0, ms*int64(time.Millisecond))
 }
