@@ -14,7 +14,7 @@ type SubscribeMessage struct {
 	Args []string `json:"args"`
 }
 
-func connectToBybit(messenger *Messenger) {
+func connectToBybit(runner *Runner) {
 	// Connect to Bybit Testnet
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("MAINNET_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
@@ -56,7 +56,7 @@ func connectToBybit(messenger *Messenger) {
 			log.Printf("Error parsing JSON: %v", err)
 			continue
 		}
-		messenger.OrderbookMessageChan <- &orderbookMsg
+		runner.OrderbookMessageChan <- &orderbookMsg
 	}
 }
 

@@ -11,10 +11,10 @@ func main() {
 	tri := initTri()
 	// TODO DEBUG
 	tri.printAll()
-	messenger := initMessenger()
-	messenger.setTri(tri)
-	go messenger.process()
-	connectToBybit(messenger)
+	runner := initRunner()
+	runner.setTri(tri)
+	go runner.feed()
+	connectToBybit(runner)
 }
 
 func loadConfig() {
