@@ -1,16 +1,32 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/shopspring/decimal"
+	"github.com/spf13/viper"
 )
 
 const (
 	BID = "bid"
 	ASK = "ask"
 )
+
+var klines []string
+
+var klinesMap = map[string]string{
+	"BTCUSDT": "orderbook.1.BTCUSDT",
+	"ETHUSDT": "orderbook.1.ETHUSDT",
+	"ETHBTC":  "orderbook.1.ETHBTC",
+	"BTCUSDC": "orderbook.1.BTCUSDC",
+	"ETHUSDC": "orderbook.1.ETHUSDC",
+	"SOLUSDT": "orderbook.1.SOLUSDT",
+	"SOLBTC":  "orderbook.1.SOLBTC",
+}
 
 type Order struct {
 	Price decimal.Decimal
@@ -25,14 +41,16 @@ type SymbolOrder struct {
 }
 
 type Combination struct {
-	BaseQuote    bool // e.g. for "ETHBTC", true will be ETH->BTC, false will be BTC->ETH
+	BaseQuote    bool `json:"baseQuote"` // e.g. for "ETHBTC", true will be ETH->BTC, false will be BTC->ETH
 	SymbolOrders []*SymbolOrder
+	Symbols      []string `json:"symbols"`
 }
 
 // symbol -> potential combination
 type Tri struct {
 	SymbolOrdersMap       map[string]*SymbolOrder // to store bid and ask price for each symbol
 	SymbolCombinationsMap map[string][]*Combination
+	config                *viper.Viper
 }
 
 func initTri() *Tri {
@@ -41,59 +59,21 @@ func initTri() *Tri {
 		SymbolCombinationsMap: make(map[string][]*Combination),
 	}
 
-	type combination struct {
-		baseQuote bool
-		symbols   []string
-	}
-	list := []struct {
-		symbols      []string
-		combinations []combination
-	}{
-		{
-			symbols: []string{"BTCUSDT", "ETHBTC", "ETHUSDT"},
-			combinations: []combination{
-				{baseQuote: false, symbols: []string{"BTCUSDT", "ETHBTC", "ETHUSDT"}},
-				{baseQuote: true, symbols: []string{"ETHUSDT", "ETHBTC", "BTCUSDT"}},
-			},
-		},
-		// TODO FIXME
-		// {
-		// symbols: []string{"BTCUSDC", "ETHBTC", "ETHUSDC"},
-		// combinations: []combination{
-		// {baseQuote: false, symbols: []string{"BTCUSDC", "ETHBTC", "ETHUSDC"}},
-		// {baseQuote: true, symbols: []string{"ETHUSDC", "ETHBTC", "BTCUSDC"}},
-		// },
-		// },
-		// {
-		// symbols: []string{"BTCUSDT", "ETHBTC", "ETHUSDT", "BTCUSDC", "ETHUSDC"},
-		// combinations: []combination{
-		// {baseQuote: false, symbols: []string{"BTCUSDT", "ETHBTC", "ETHUSDC"}},
-		// {baseQuote: true, symbols: []string{"ETHUSDT", "ETHBTC", "BTCUSDC"}},
-		// {baseQuote: false, symbols: []string{"BTCUSDC", "ETHBTC", "ETHUSDT"}},
-		// {baseQuote: true, symbols: []string{"ETHUSDC", "ETHBTC", "BTCUSDT"}},
-		// },
-		// },
-	}
-	for _, item := range list {
-		var cs []*Combination
-		for _, combination := range item.combinations {
-			c := &Combination{BaseQuote: combination.baseQuote}
-			for _, symbol := range combination.symbols {
+	tri.loadSymbolCombinations()
+	for _, combinations := range tri.SymbolCombinationsMap {
+		for _, combination := range combinations {
+			for _, symbol := range combination.Symbols {
 				if tri.SymbolOrdersMap[symbol] == nil {
 					tri.SymbolOrdersMap[symbol] = &SymbolOrder{Symbol: symbol}
 				}
-				c.SymbolOrders = append(c.SymbolOrders, tri.SymbolOrdersMap[symbol])
-			}
-			cs = append(cs, c)
-		}
-		for _, symbol := range item.symbols {
-			if tri.SymbolCombinationsMap[symbol] == nil {
-				tri.SymbolCombinationsMap[symbol] = cs
-			} else {
-				tri.SymbolCombinationsMap[symbol] = append(tri.SymbolCombinationsMap[symbol], cs...)
+				combination.SymbolOrders = append(combination.SymbolOrders, tri.SymbolOrdersMap[symbol])
 			}
 		}
 	}
+
+	// For ws connect
+	tri.setKlines()
+
 	return tri
 }
 
@@ -113,22 +93,45 @@ func (tri *Tri) SetOrder(action string, ts time.Time, sym string, price Price) e
 	case ASK:
 		tri.SymbolOrdersMap[sym].Ask = &Order{Price: p, Size: s}
 	}
+
 	// TODO DEBUG
 	// tri.printSymbol(sym)
 	return nil
 }
 
-func (tri *Tri) printAll() {
+func (tri *Tri) printAllCombinations() {
 	fmt.Println("\nCombinations:")
-	for symbol, combinations := range tri.SymbolCombinationsMap {
-		fmt.Printf("%s:\n", symbol)
+	for baseSymbol, combinations := range tri.SymbolCombinationsMap {
+		fmt.Printf("%s\n", baseSymbol)
 		for _, combination := range combinations {
-			fmt.Printf("  [%s -> %s -> %s]\n", combination.SymbolOrders[0].Symbol, combination.SymbolOrders[1].Symbol, combination.SymbolOrders[2].Symbol)
+			for _, order := range combination.SymbolOrders {
+				fmt.Printf("  %s", order.Symbol)
+			}
+			fmt.Println()
 		}
 	}
-	fmt.Println()
 }
 
 func (tri *Tri) printSymbol(sym string) {
 	fmt.Printf("[%s] %s, Bid: %s, Ask: %s\n", tri.SymbolOrdersMap[sym].Ts.Format("2006-01-02 15:04:05"), sym, tri.SymbolOrdersMap[sym].Bid, tri.SymbolOrdersMap[sym].Ask)
+}
+
+func (tri *Tri) loadSymbolCombinations() {
+	data, err := os.ReadFile("symbol_combinations.json")
+	if err != nil {
+		log.Fatalf("Error reading JSON file: %v", err)
+	}
+	err = json.Unmarshal(data, &tri.SymbolCombinationsMap)
+	if err != nil {
+		log.Fatalf("Error unmarshaling JSON: %v", err)
+	}
+}
+
+func (tri *Tri) setKlines() {
+	for baseSymbol, _ := range tri.SymbolCombinationsMap {
+		if klinesMap[baseSymbol] == "" {
+			log.Fatalf("klinesMap misses %s", baseSymbol)
+		}
+		klines = append(klines, klinesMap[baseSymbol])
+	}
 }

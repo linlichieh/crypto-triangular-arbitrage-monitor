@@ -67,8 +67,9 @@ func (r *Runner) setOrder(orderbookMsg *OrderbookMessage) {
 	if len(orderbookMsg.Data.Asks) > 0 {
 		r.Tri.SetOrder(ASK, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Asks[0])
 	}
-	// TODO DEBUG
-	// fmt.Printf("%s %s\n", ts.Format("2006-01-02 15:04:05"), orderbookMsg.Data.Symbol)
+
+	// TODO calculate symbol by its channel
+	// TODO interval for cool down
 	r.calculateAllCombinations(ts, orderbookMsg.Data.Symbol)
 }
 

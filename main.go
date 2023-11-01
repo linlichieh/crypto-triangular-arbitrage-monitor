@@ -7,17 +7,19 @@ import (
 )
 
 func main() {
-	loadConfig()
+	loadEnvConfig()
 	tri := initTri()
 	// TODO DEBUG
-	tri.printAll()
+	tri.printAllCombinations()
 	runner := initRunner()
 	runner.setTri(tri)
 	go runner.feed()
+
+	// Have to be after initTri as it will set klines
 	connectToBybit(runner)
 }
 
-func loadConfig() {
+func loadEnvConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")

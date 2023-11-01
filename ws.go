@@ -24,13 +24,8 @@ func connectToBybit(runner *Runner) {
 
 	// Subscribe to a spot channel, for example: klineV2.1.BTCUSDT.1
 	subscribePayload := SubscribeMessage{
-		Op: "subscribe",
-		Args: []string{
-			// "kline.1.BTCUSDT",
-			"orderbook.1.BTCUSDT",
-			"orderbook.1.ETHUSDT",
-			"orderbook.1.ETHBTC",
-		},
+		Op:   "subscribe",
+		Args: klines,
 	}
 
 	err = conn.WriteJSON(subscribePayload)
