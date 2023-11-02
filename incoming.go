@@ -9,7 +9,28 @@ import (
 
 type Price []string
 
-type Orderbook struct {
+type OrderbookRunner struct {
+	Tri                *Tri
+	Fee                decimal.Decimal // 0.01 = 1%
+	NetPercent         decimal.Decimal
+	OrderbookListeners map[string]*OrderbookListener
+}
+
+type OrderbookListener struct {
+	ignoreIncomingOrder bool
+	orderbookMessageCh  chan *OrderbookMsg
+}
+
+// Json
+type OrderbookMsg struct {
+	Topic string        `json:"topic"`
+	Ts    int64         `json:"ts"`   // ms
+	Type  string        `json:"type"` // Data type. snapshot,delta
+	Data  OrderbookData `json:"data"`
+}
+
+// Json
+type OrderbookData struct {
 	Symbol   string  `json:"s"`
 	Bids     []Price `json:"b"`
 	Asks     []Price `json:"a"`
@@ -17,64 +38,64 @@ type Orderbook struct {
 	Seq      int64   `json:"seq"` // You can use this field to compare different levels orderbook data, and for the smaller seq, then it means the data is generated earlier.
 }
 
-type OrderbookMessage struct {
-	Topic string    `json:"topic"`
-	Ts    int64     `json:"ts"`   // ms
-	Type  string    `json:"type"` // Data type. snapshot,delta
-	Data  Orderbook `json:"data"`
-}
-
-type Runner struct {
-	Fee                  decimal.Decimal // 0.01 = 1%
-	NetPercent           decimal.Decimal
-	OrderbookMessageChan chan *OrderbookMessage
-	Tri                  *Tri
-	ignoreIncomingMark   bool
-}
-
-func initRunner() *Runner {
+func initOrderbookRunner(tri *Tri) *OrderbookRunner {
 	fee := decimal.NewFromFloat(0.001)
-	return &Runner{
-		Fee:                  fee,
-		NetPercent:           decimal.NewFromInt(1).Sub(fee),
-		OrderbookMessageChan: make(chan *OrderbookMessage),
+	orderbookRunner := &OrderbookRunner{
+		Fee:                fee,
+		NetPercent:         decimal.NewFromInt(1).Sub(fee),
+		Tri:                tri,
+		OrderbookListeners: make(map[string]*OrderbookListener),
 	}
+	orderbookRunner.initOrderbookListeners()
+	return orderbookRunner
 }
 
-func (r *Runner) setTri(tri *Tri) {
-	r.Tri = tri
-}
-
-func (r *Runner) feed() {
-	for {
-		select {
-		case orderbookMsg := <-r.OrderbookMessageChan:
-			if r.ignoreIncomingMark {
-				continue
-			}
-			r.ignoreIncomingMark = true
-			go r.setOrder(orderbookMsg)
+func (or *OrderbookRunner) initOrderbookListeners() {
+	for symbol, _ := range or.Tri.SymbolOrdersMap {
+		or.OrderbookListeners[symbol] = &OrderbookListener{
+			orderbookMessageCh: make(chan *OrderbookMsg),
 		}
 	}
 }
 
-func (r *Runner) setOrder(orderbookMsg *OrderbookMessage) {
-	defer func() { r.ignoreIncomingMark = false }()
-	ts := msToTime(orderbookMsg.Ts)
-	if len(orderbookMsg.Data.Bids) > 0 {
-		r.Tri.SetOrder(BID, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Bids[0])
+func (or *OrderbookRunner) ListenAll() {
+	for symbol, _ := range or.OrderbookListeners {
+		go or.listenOrderbook(symbol)
 	}
-	if len(orderbookMsg.Data.Asks) > 0 {
-		r.Tri.SetOrder(ASK, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Asks[0])
-	}
-
-	// TODO calculate symbol by its channel
-	// TODO interval for cool down
-	r.calculateAllCombinations(ts, orderbookMsg.Data.Symbol)
 }
 
-func (m *Runner) calculateAllCombinations(ts time.Time, symbol string) {
-	combinations := m.Tri.SymbolCombinationsMap[symbol]
+func (or *OrderbookRunner) listenOrderbook(symbol string) {
+	listener := or.OrderbookListeners[symbol]
+	for {
+		select {
+		case orderbookMsg := <-listener.orderbookMessageCh:
+			if listener.ignoreIncomingOrder {
+				continue
+			}
+			listener.ignoreIncomingOrder = true
+			or.setOrder(symbol, orderbookMsg)
+		}
+	}
+}
+
+func (or *OrderbookRunner) setOrder(symbol string, orderbookMsg *OrderbookMsg) {
+	listener := or.OrderbookListeners[symbol]
+	defer func() { listener.ignoreIncomingOrder = false }()
+
+	ts := msToTime(orderbookMsg.Ts)
+	if len(orderbookMsg.Data.Bids) > 0 {
+		or.Tri.SetOrder(BID, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Bids[0])
+	}
+	if len(orderbookMsg.Data.Asks) > 0 {
+		or.Tri.SetOrder(ASK, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Asks[0])
+	}
+
+	// TODO interval for cool down
+	or.calculateTriangularArbitrage(symbol)
+}
+
+func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
+	combinations := or.Tri.SymbolCombinationsMap[symbol]
 	for _, combination := range combinations {
 		if len(combination.SymbolOrders) < 3 {
 			return
@@ -90,17 +111,17 @@ func (m *Runner) calculateAllCombinations(ts time.Time, symbol string) {
 		}
 		var result, secondTrade decimal.Decimal
 		capital := decimal.NewFromInt(1000)
-		firstTrade := capital.Div(combination.SymbolOrders[0].Bid.Price).Mul(m.NetPercent)
+		firstTrade := capital.Div(combination.SymbolOrders[0].Bid.Price).Mul(or.NetPercent)
 		if combination.BaseQuote {
-			secondTrade = firstTrade.Mul(combination.SymbolOrders[1].Bid.Price).Mul(m.NetPercent)
+			secondTrade = firstTrade.Mul(combination.SymbolOrders[1].Bid.Price).Mul(or.NetPercent)
 		} else {
-			secondTrade = firstTrade.Div(combination.SymbolOrders[1].Bid.Price).Mul(m.NetPercent)
+			secondTrade = firstTrade.Div(combination.SymbolOrders[1].Bid.Price).Mul(or.NetPercent)
 		}
-		thirdTrade := secondTrade.Mul(combination.SymbolOrders[2].Bid.Price).Mul(m.NetPercent)
+		thirdTrade := secondTrade.Mul(combination.SymbolOrders[2].Bid.Price).Mul(or.NetPercent)
 		result = thirdTrade.Truncate(4)
 		fmt.Printf(
 			"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)\n",
-			ts.Format("2006-01-02 15:04:05"),
+			time.Now().Format("2006-01-02 15:04:05"),
 			symbol,
 			capital.String(),
 			result.String(),

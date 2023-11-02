@@ -8,15 +8,16 @@ import (
 
 func main() {
 	loadEnvConfig()
+
 	tri := initTri()
-	// TODO DEBUG
 	tri.printAllCombinations()
-	runner := initRunner()
-	runner.setTri(tri)
-	go runner.feed()
+
+	orderbookRunner := initOrderbookRunner(tri)
+	go orderbookRunner.ListenAll()
 
 	// Have to be after initTri as it will set klines
-	connectToBybit(runner)
+	wsClient := initWsClient(tri, orderbookRunner)
+	wsClient.ConnectToBybit()
 }
 
 func loadEnvConfig() {

@@ -14,8 +14,25 @@ type SubscribeMessage struct {
 	Args []string `json:"args"`
 }
 
-func connectToBybit(runner *Runner) {
-	// Connect to Bybit Testnet
+type WsClient struct {
+	Tri             *Tri
+	OrderbookRunner *OrderbookRunner
+	klines          []string
+}
+
+func initWsClient(tri *Tri, orderbookRunner *OrderbookRunner) *WsClient {
+	klines := tri.initWsKlines()
+	if len(klines) == 0 {
+		log.Fatal("There is no klines to listen")
+	}
+	return &WsClient{
+		Tri:             tri,
+		OrderbookRunner: orderbookRunner,
+		klines:          klines,
+	}
+}
+
+func (c *WsClient) ConnectToBybit() {
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("MAINNET_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
 		log.Fatalf("Error connecting: %v", err)
@@ -25,12 +42,23 @@ func connectToBybit(runner *Runner) {
 	// Subscribe to a spot channel, for example: klineV2.1.BTCUSDT.1
 	subscribePayload := SubscribeMessage{
 		Op:   "subscribe",
-		Args: klines,
+		Args: c.klines,
 	}
 
 	err = conn.WriteJSON(subscribePayload)
 	if err != nil {
 		log.Fatalf("Error subscribing: %v", err)
+	}
+	_, message, err := conn.ReadMessage()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var parsedMsg map[string]interface{}
+	if err := json.Unmarshal(message, &parsedMsg); err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+	if !parsedMsg["success"].(bool) {
+		log.Fatal("Failed to connect WS, err:", string(message))
 	}
 
 	// Handle incoming messages
@@ -40,18 +68,12 @@ func connectToBybit(runner *Runner) {
 			log.Printf("Error reading message: %v", err)
 			break
 		}
-		var parsedMsg map[string]interface{}
-		if err := json.Unmarshal(message, &parsedMsg); err != nil {
-			log.Printf("Error parsing JSON: %v", err)
-			continue
-		}
-
-		var orderbookMsg OrderbookMessage
+		var orderbookMsg OrderbookMsg
 		if err := json.Unmarshal(message, &orderbookMsg); err != nil {
 			log.Printf("Error parsing JSON: %v", err)
 			continue
 		}
-		runner.OrderbookMessageChan <- &orderbookMsg
+		c.OrderbookRunner.OrderbookListeners[orderbookMsg.Data.Symbol].orderbookMessageCh <- &orderbookMsg
 	}
 }
 
