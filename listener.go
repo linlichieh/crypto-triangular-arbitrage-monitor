@@ -73,7 +73,7 @@ func (or *OrderbookRunner) listenOrderbook(symbol string) {
 				continue
 			}
 			listener.ignoreIncomingOrder = true
-			or.setOrder(symbol, orderbookMsg)
+			go or.setOrder(symbol, orderbookMsg)
 		}
 	}
 }
@@ -92,6 +92,9 @@ func (or *OrderbookRunner) setOrder(symbol string, orderbookMsg *OrderbookMsg) {
 
 	// TODO interval for cool down
 	or.calculateTriangularArbitrage(symbol)
+
+	// Optional, check it periodically instead of every time receiving it
+	time.Sleep(300 * time.Millisecond)
 }
 
 func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
@@ -119,18 +122,23 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
 		}
 		thirdTrade := secondTrade.Mul(combination.SymbolOrders[2].Bid.Price).Mul(or.NetPercent)
 		result = thirdTrade.Truncate(4)
-		fmt.Printf(
-			"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)\n",
-			time.Now().Format("2006-01-02 15:04:05"),
-			symbol,
-			capital.String(),
-			result.String(),
-			combination.SymbolOrders[0].Symbol,
-			combination.SymbolOrders[0].Bid.Price.String(),
-			combination.SymbolOrders[1].Symbol,
-			combination.SymbolOrders[1].Bid.Price.String(),
-			combination.SymbolOrders[2].Symbol,
-			combination.SymbolOrders[2].Bid.Price.String(),
-		)
+		if result.GreaterThanOrEqual(capital) {
+			fmt.Println()
+			fmt.Printf(
+				"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)\n",
+				time.Now().Format("2006-01-02 15:04:05"),
+				symbol,
+				capital.String(),
+				result.String(),
+				combination.SymbolOrders[0].Symbol,
+				combination.SymbolOrders[0].Bid.Price.String(),
+				combination.SymbolOrders[1].Symbol,
+				combination.SymbolOrders[1].Bid.Price.String(),
+				combination.SymbolOrders[2].Symbol,
+				combination.SymbolOrders[2].Bid.Price.String(),
+			)
+		} else {
+			fmt.Printf(".")
+		}
 	}
 }

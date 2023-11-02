@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -33,9 +34,19 @@ func initWsClient(tri *Tri, orderbookRunner *OrderbookRunner) *WsClient {
 }
 
 func (c *WsClient) ConnectToBybit() {
+	for {
+		if err := c.connect(); err != nil {
+			fmt.Printf("Ws error: %v", err)
+		}
+		fmt.Println("Reconnecting...")
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func (c *WsClient) connect() error {
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("MAINNET_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
-		log.Fatalf("Error connecting: %v", err)
+		return fmt.Errorf("failed to dial, err: %v", err)
 	}
 	defer conn.Close()
 
@@ -47,31 +58,29 @@ func (c *WsClient) ConnectToBybit() {
 
 	err = conn.WriteJSON(subscribePayload)
 	if err != nil {
-		log.Fatalf("Error subscribing: %v", err)
+		return fmt.Errorf("failed to write json, err: %v", err)
 	}
 	_, message, err := conn.ReadMessage()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to read message after connecting, err: %v", err)
 	}
 	var parsedMsg map[string]interface{}
 	if err := json.Unmarshal(message, &parsedMsg); err != nil {
-		log.Fatalf("Error parsing JSON: %v", err)
+		return fmt.Errorf("failed to parse message after connecting, err: %v", err)
 	}
 	if !parsedMsg["success"].(bool) {
-		log.Fatal("Failed to connect WS, err:", string(message))
+		return fmt.Errorf("ws response, err: %v", err)
 	}
 
 	// Handle incoming messages
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("Error reading message: %v", err)
-			break
+			return fmt.Errorf("failed to read message during running, err: %v", err)
 		}
 		var orderbookMsg OrderbookMsg
 		if err := json.Unmarshal(message, &orderbookMsg); err != nil {
-			log.Printf("Error parsing JSON: %v", err)
-			continue
+			return fmt.Errorf("failed to parse message during running, err: %v", err)
 		}
 		c.OrderbookRunner.OrderbookListeners[orderbookMsg.Data.Symbol].orderbookMessageCh <- &orderbookMsg
 	}
