@@ -90,11 +90,10 @@ func (or *OrderbookRunner) setOrder(symbol string, orderbookMsg *OrderbookMsg) {
 		or.Tri.SetOrder(ASK, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Asks[0])
 	}
 
-	// TODO interval for cool down
 	or.calculateTriangularArbitrage(symbol)
 
-	// Optional, check it periodically instead of every time receiving it
-	time.Sleep(300 * time.Millisecond)
+	// Cooldown interval
+	time.Sleep(200 * time.Millisecond)
 }
 
 func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
