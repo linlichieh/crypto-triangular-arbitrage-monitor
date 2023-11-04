@@ -8,23 +8,31 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Prevent triangular arbitrage happened all of sudden that causes issues
-const TRI_ARB_FOUND_LIMIT_INTERVAL_MS = 1200
+// Rate limit for triangular arbitrage happens
+const TRI_ARB_FOUND_INTERVAL_MILLISECOND = 500
+
+// Slack
+const SEND_TO_WATCH_INTERVAL_MILLISECOND = 1100
+const SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND = 30
+
+const CAPITAL = 1000
 
 type Price []string
 
 type OrderbookRunner struct {
-	Tri                   *Tri
-	Fee                   decimal.Decimal // 0.01 = 1%
-	NetPercent            decimal.Decimal
-	OrderbookListeners    map[string]*OrderbookListener
-	Messenger             *Messenger
-	LastTimeOfTriArbFound time.Time
+	Tri                *Tri
+	Fee                decimal.Decimal // 0.01 = 1%
+	NetPercent         decimal.Decimal
+	OrderbookListeners map[string]*OrderbookListener
+	Messenger          *Messenger
+	ChannelWatch       chan string // Message queue
+	ChannelSystemLogs  chan string
 }
 
 type OrderbookListener struct {
-	ignoreIncomingOrder bool
-	orderbookMessageCh  chan *OrderbookMsg
+	lastTimeOfTriArbFound time.Time
+	ignoreIncomingOrder   bool
+	orderbookMessageCh    chan *OrderbookMsg
 }
 
 // Json
@@ -51,6 +59,8 @@ func initOrderbookRunner(tri *Tri) *OrderbookRunner {
 		NetPercent:         decimal.NewFromInt(1).Sub(fee),
 		Tri:                tri,
 		OrderbookListeners: make(map[string]*OrderbookListener),
+		ChannelWatch:       make(chan string),
+		ChannelSystemLogs:  make(chan string),
 	}
 	orderbookRunner.initOrderbookListeners()
 	return orderbookRunner
@@ -72,6 +82,10 @@ func (or *OrderbookRunner) ListenAll() {
 	for symbol, _ := range or.OrderbookListeners {
 		go or.listenOrderbook(symbol)
 	}
+
+	// Send messages to slack
+	go or.sendToWatch()
+	go or.sendToSystemLogs()
 }
 
 func (or *OrderbookRunner) listenOrderbook(symbol string) {
@@ -82,14 +96,19 @@ func (or *OrderbookRunner) listenOrderbook(symbol string) {
 			if listener.ignoreIncomingOrder {
 				continue
 			}
+
+			// Skip if it's less than interval
+			if time.Since(listener.lastTimeOfTriArbFound) <= time.Duration(TRI_ARB_FOUND_INTERVAL_MILLISECOND)*time.Millisecond {
+				continue
+			}
+
 			listener.ignoreIncomingOrder = true
-			go or.setOrder(symbol, orderbookMsg)
+			or.setOrder(symbol, listener, orderbookMsg)
 		}
 	}
 }
 
-func (or *OrderbookRunner) setOrder(symbol string, orderbookMsg *OrderbookMsg) {
-	listener := or.OrderbookListeners[symbol]
+func (or *OrderbookRunner) setOrder(symbol string, listener *OrderbookListener, orderbookMsg *OrderbookMsg) {
 	defer func() { listener.ignoreIncomingOrder = false }()
 
 	ts := msToTime(orderbookMsg.Ts)
@@ -100,13 +119,13 @@ func (or *OrderbookRunner) setOrder(symbol string, orderbookMsg *OrderbookMsg) {
 		or.Tri.SetOrder(ASK, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Asks[0])
 	}
 
-	or.calculateTriangularArbitrage(symbol)
-
-	// Cooldown interval
-	time.Sleep(200 * time.Millisecond)
+	or.calculateTriangularArbitrage(symbol, listener)
 }
 
-func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
+func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener *OrderbookListener) {
+	var mostProfitPrice decimal.Decimal
+	var mostProfitCombination *Combination
+
 	combinations := or.Tri.SymbolCombinationsMap[symbol]
 	for _, combination := range combinations {
 		if len(combination.SymbolOrders) < 3 {
@@ -121,8 +140,10 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
 			log.Println("Warning: at least one of bids or prices is nil, please wait for all prices are set")
 			return
 		}
+
+		// Calculate the profit
 		var result, secondTrade decimal.Decimal
-		capital := decimal.NewFromInt(1000)
+		capital := decimal.NewFromInt(CAPITAL)
 		firstTrade := capital.Div(combination.SymbolOrders[0].Bid.Price).Mul(or.NetPercent)
 		if combination.BaseQuote {
 			secondTrade = firstTrade.Mul(combination.SymbolOrders[1].Bid.Price).Mul(or.NetPercent)
@@ -131,26 +152,76 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
 		}
 		thirdTrade := secondTrade.Mul(combination.SymbolOrders[2].Bid.Price).Mul(or.NetPercent)
 		result = thirdTrade.Truncate(4)
-		if result.GreaterThanOrEqual(capital) {
-			msg := fmt.Sprintf(
-				"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)",
-				time.Now().Format("2006-01-02 15:04:05"),
-				symbol,
-				capital.String(),
-				result.String(),
-				combination.SymbolOrders[0].Symbol,
-				combination.SymbolOrders[0].Bid.Price.String(),
-				combination.SymbolOrders[1].Symbol,
-				combination.SymbolOrders[1].Bid.Price.String(),
-				combination.SymbolOrders[2].Symbol,
-				combination.SymbolOrders[2].Bid.Price.String(),
-			)
-			// Skip it if it's less than limit interval
-			if time.Since(or.LastTimeOfTriArbFound) <= time.Duration(TRI_ARB_FOUND_LIMIT_INTERVAL_MS)*time.Millisecond {
-				return
+
+		// Store most profitable combination
+		if result.GreaterThan(mostProfitPrice) {
+			mostProfitPrice = result
+			mostProfitCombination = combination
+		}
+	}
+
+	capital := decimal.NewFromInt(CAPITAL)
+	if mostProfitPrice.GreaterThan(capital) {
+		msg := fmt.Sprintf(
+			"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)",
+			time.Now().Format("2006-01-02 15:04:05"),
+			symbol,
+			capital.String(),
+			mostProfitPrice.String(),
+			mostProfitCombination.SymbolOrders[0].Symbol,
+			mostProfitCombination.SymbolOrders[0].Bid.Price.String(),
+			mostProfitCombination.SymbolOrders[1].Symbol,
+			mostProfitCombination.SymbolOrders[1].Bid.Price.String(),
+			mostProfitCombination.SymbolOrders[2].Symbol,
+			mostProfitCombination.SymbolOrders[2].Bid.Price.String(),
+		)
+		listener.lastTimeOfTriArbFound = time.Now()
+		or.ChannelWatch <- msg
+	}
+
+	// Like health check
+	or.ChannelSystemLogs <- "."
+}
+
+// Send to slack every second in case hit the ceiling of rate limits
+func (or *OrderbookRunner) sendToWatch() {
+	ticker := time.NewTicker(time.Duration(SEND_TO_WATCH_INTERVAL_MILLISECOND) * time.Millisecond)
+	defer ticker.Stop()
+
+	var combinedMsg string
+	for {
+		select {
+		case msg := <-or.ChannelWatch:
+			combinedMsg += fmt.Sprintf("%s\n", msg)
+		case <-ticker.C:
+			if combinedMsg == "" {
+				continue
 			}
-			or.LastTimeOfTriArbFound = time.Now()
-			or.Messenger.sendToWatch(msg)
+			go or.Messenger.sendToWatch(combinedMsg)
+
+			// flush the combined message
+			combinedMsg = ""
+		}
+	}
+}
+
+func (or *OrderbookRunner) sendToSystemLogs() {
+	ticker := time.NewTicker(time.Duration(SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND) * time.Second)
+	defer ticker.Stop()
+
+	var combinedMsg string
+	for {
+		select {
+		case msg := <-or.ChannelSystemLogs:
+			combinedMsg += msg
+		case <-ticker.C:
+			if combinedMsg == "" {
+				continue
+			}
+			go or.Messenger.sendToSystemLogs(fmt.Sprintf("Checked %d times", len(combinedMsg)))
+
+			// flush the combined message
+			combinedMsg = ""
 		}
 	}
 }

@@ -73,6 +73,7 @@ func (m *Messenger) sendSlackNotification(channel string, msg string) error {
 	return nil
 }
 
+// System log
 func (m *Messenger) sendToSystemLogs(msg string) {
 	log.Println(msg)
 	err := m.sendSlackNotification(m.Channel.SystemLogs, msg)
@@ -81,6 +82,7 @@ func (m *Messenger) sendToSystemLogs(msg string) {
 	}
 }
 
+// Triangular arbitrage found
 func (m *Messenger) sendToWatch(msg string) {
 	log.Println(msg)
 	err := m.sendSlackNotification(m.Channel.Watch, msg)
