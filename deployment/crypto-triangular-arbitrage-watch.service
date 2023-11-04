@@ -1,0 +1,12 @@
+[Unit]
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+User=ec2-user
+ExecStart=/home/ec2-user/app/crypto-triangular-arbitrage-watch
+Restart=always
+RestartSec=5
+WorkingDirectory=/home/ec2-user/app
+
+[Install]
+WantedBy=multi-user.target

@@ -16,6 +16,7 @@ vendor/
 
 # config file
 config.yml
+prod-config.yml
 
 # binary
 crypto-triangular-arbitrage-watch
