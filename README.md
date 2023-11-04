@@ -13,6 +13,4 @@ This is a Go application for real-time detection of triangular arbitrage opportu
 
 Run
 
-    go build && ./crypto-triangular-arbitrage-monitor
-
-
+    go build && ./crypto-triangular-arbitrage-watch

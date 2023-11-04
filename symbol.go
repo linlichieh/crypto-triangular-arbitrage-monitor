@@ -16,13 +16,15 @@ const (
 )
 
 var klinesMap = map[string]string{
-	"BTCUSDT": "orderbook.1.BTCUSDT",
-	"ETHUSDT": "orderbook.1.ETHUSDT",
-	"ETHBTC":  "orderbook.1.ETHBTC",
-	"BTCUSDC": "orderbook.1.BTCUSDC",
-	"ETHUSDC": "orderbook.1.ETHUSDC",
-	"SOLUSDT": "orderbook.1.SOLUSDT",
-	"SOLBTC":  "orderbook.1.SOLBTC",
+	"BTCUSDT":  "orderbook.1.BTCUSDT",
+	"ETHUSDT":  "orderbook.1.ETHUSDT",
+	"ETHBTC":   "orderbook.1.ETHBTC",
+	"BTCUSDC":  "orderbook.1.BTCUSDC",
+	"ETHUSDC":  "orderbook.1.ETHUSDC",
+	"SOLUSDT":  "orderbook.1.SOLUSDT",
+	"SOLBTC":   "orderbook.1.SOLBTC",
+	"WBTCUSDT": "orderbook.1.WBTCUSDT",
+	"WBTCBTC":  "orderbook.1.WBTCBTC",
 }
 
 // symbol -> potential combination
