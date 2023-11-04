@@ -6,3 +6,6 @@ deploy:
 	rsync -av -e ssh prod-config.yml tri:/home/ec2-user/app/config.yml
 	rsync -av -e ssh symbol_combinations.json tri:/home/ec2-user/app/
 	ssh -t tri "sudo systemctl restart crypto-triangular-arbitrage-watch"
+run:
+	go build
+	./crypto-triangular-arbitrage-watch

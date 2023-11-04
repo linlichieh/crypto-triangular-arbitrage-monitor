@@ -9,11 +9,9 @@ This is a Go application for real-time detection of triangular arbitrage opportu
 * Precision calculation with fees included
 * Notify slack channel when opportunities show up
 
-# Installation
+# Run
 
-Run
-
-    go build && ./crypto-triangular-arbitrage-watch
+    make run
 
 # Deployment
 
