@@ -2,18 +2,24 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/shopspring/decimal"
 )
 
+// Prevent triangular arbitrage happened all of sudden that causes issues
+const TRI_ARB_FOUND_LIMIT_INTERVAL_MS = 1200
+
 type Price []string
 
 type OrderbookRunner struct {
-	Tri                *Tri
-	Fee                decimal.Decimal // 0.01 = 1%
-	NetPercent         decimal.Decimal
-	OrderbookListeners map[string]*OrderbookListener
+	Tri                   *Tri
+	Fee                   decimal.Decimal // 0.01 = 1%
+	NetPercent            decimal.Decimal
+	OrderbookListeners    map[string]*OrderbookListener
+	Messenger             *Messenger
+	LastTimeOfTriArbFound time.Time
 }
 
 type OrderbookListener struct {
@@ -48,6 +54,10 @@ func initOrderbookRunner(tri *Tri) *OrderbookRunner {
 	}
 	orderbookRunner.initOrderbookListeners()
 	return orderbookRunner
+}
+
+func (or *OrderbookRunner) setMessenger(messenger *Messenger) {
+	or.Messenger = messenger
 }
 
 func (or *OrderbookRunner) initOrderbookListeners() {
@@ -108,7 +118,7 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
 			combination.SymbolOrders[1].Ask == nil ||
 			combination.SymbolOrders[2].Bid == nil ||
 			combination.SymbolOrders[2].Ask == nil {
-			fmt.Println("Warning: at least one of bids or prices is nil, please wait for all prices are set")
+			log.Println("Warning: at least one of bids or prices is nil, please wait for all prices are set")
 			return
 		}
 		var result, secondTrade decimal.Decimal
@@ -122,9 +132,8 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
 		thirdTrade := secondTrade.Mul(combination.SymbolOrders[2].Bid.Price).Mul(or.NetPercent)
 		result = thirdTrade.Truncate(4)
 		if result.GreaterThanOrEqual(capital) {
-			fmt.Println()
-			fmt.Printf(
-				"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)\n",
+			msg := fmt.Sprintf(
+				"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)",
 				time.Now().Format("2006-01-02 15:04:05"),
 				symbol,
 				capital.String(),
@@ -136,8 +145,12 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string) {
 				combination.SymbolOrders[2].Symbol,
 				combination.SymbolOrders[2].Bid.Price.String(),
 			)
-		} else {
-			fmt.Printf(".")
+			// Skip it if it's less than limit interval
+			if time.Since(or.LastTimeOfTriArbFound) <= time.Duration(TRI_ARB_FOUND_LIMIT_INTERVAL_MS)*time.Millisecond {
+				return
+			}
+			or.LastTimeOfTriArbFound = time.Now()
+			or.Messenger.sendToWatch(msg)
 		}
 	}
 }

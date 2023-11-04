@@ -1,5 +1,5 @@
 # ENV
-ENV: e.g. prod / dev
+ENV: e.g. dev / prod
 LOG_PATH: e.g. logs/prod.log
 
 
@@ -12,3 +12,10 @@ MAINNET_PUBLIC_WS_SPOT: wss://stream.bybit.com/v5/public/spot
 API_KEY:
 API_SECRET:
 
+# Slack
+SLACK_TOKEN:
+SLACK_SEND_MESSAGE_URL: e.g. https://slack.com/api/chat.postMessage
+SLACK_DEV_CHANNEL_WATCH: dev-watch
+SLACK_DEV_CHANNEL_SYSTEM_LOGS: dev-system-logs
+SLACK_PROD_CHANNEL_WATCH: prod-watch
+SLACK_PROD_CHANNEL_SYSTEM_LOGS: prod-system-logs

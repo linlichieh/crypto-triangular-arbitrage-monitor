@@ -19,6 +19,7 @@ type WsClient struct {
 	Tri             *Tri
 	OrderbookRunner *OrderbookRunner
 	klines          []string
+	Messenger       *Messenger
 }
 
 func initWsClient(tri *Tri, orderbookRunner *OrderbookRunner) *WsClient {
@@ -33,17 +34,21 @@ func initWsClient(tri *Tri, orderbookRunner *OrderbookRunner) *WsClient {
 	}
 }
 
-func (c *WsClient) ConnectToBybit() {
+func (ws *WsClient) setMessenger(messenger *Messenger) {
+	ws.Messenger = messenger
+}
+
+func (ws *WsClient) ConnectToBybit() {
 	for {
-		if err := c.connect(); err != nil {
-			fmt.Printf("Ws error: %v", err)
+		if err := ws.connect(); err != nil {
+			ws.Messenger.sendToSystemLogs(fmt.Sprintf("Websocket error: %v", err))
 		}
-		fmt.Println("Reconnecting...")
+		ws.Messenger.sendToSystemLogs("Reconnecting...")
 		time.Sleep(3 * time.Second)
 	}
 }
 
-func (c *WsClient) connect() error {
+func (ws *WsClient) connect() error {
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("MAINNET_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
 		return fmt.Errorf("failed to dial, err: %v", err)
@@ -53,7 +58,7 @@ func (c *WsClient) connect() error {
 	// Subscribe to a spot channel, for example: klineV2.1.BTCUSDT.1
 	subscribePayload := SubscribeMessage{
 		Op:   "subscribe",
-		Args: c.klines,
+		Args: ws.klines,
 	}
 
 	err = conn.WriteJSON(subscribePayload)
@@ -73,6 +78,8 @@ func (c *WsClient) connect() error {
 	}
 
 	// Handle incoming messages
+	ws.Messenger.sendToSystemLogs("Running successfully!")
+	ws.Messenger.sendToSystemLogs("Listening...")
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
@@ -82,7 +89,7 @@ func (c *WsClient) connect() error {
 		if err := json.Unmarshal(message, &orderbookMsg); err != nil {
 			return fmt.Errorf("failed to parse message during running, err: %v", err)
 		}
-		c.OrderbookRunner.OrderbookListeners[orderbookMsg.Data.Symbol].orderbookMessageCh <- &orderbookMsg
+		ws.OrderbookRunner.OrderbookListeners[orderbookMsg.Data.Symbol].orderbookMessageCh <- &orderbookMsg
 	}
 }
 

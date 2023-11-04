@@ -31,6 +31,7 @@ var klinesMap = map[string]string{
 type Tri struct {
 	SymbolOrdersMap       map[string]*SymbolOrder // to store bid and ask price for each symbol
 	SymbolCombinationsMap map[string][]*Combination
+	Messenger             *Messenger
 }
 
 // Combination is a paris of 3 symbols
@@ -60,6 +61,10 @@ func initTri() *Tri {
 	}
 	tri.loadSymbolCombinations()
 	return tri
+}
+
+func (tri *Tri) setMessenger(messenger *Messenger) {
+	tri.Messenger = messenger
 }
 
 func (tri *Tri) loadSymbolCombinations() {
@@ -113,27 +118,20 @@ func (tri *Tri) SetOrder(action string, ts time.Time, sym string, price Price) e
 	case ASK:
 		tri.SymbolOrdersMap[sym].Ask = &Order{Price: p, Size: s}
 	}
-
-	// TODO DEBUG
-	// tri.printSymbol(sym)
 	return nil
 }
 
-// DEBUG
 func (tri *Tri) printAllCombinations() {
-	fmt.Println("\nCombinations:")
+	msg := "Symbol combinations:"
 	for baseSymbol, combinations := range tri.SymbolCombinationsMap {
-		fmt.Printf("%s\n", baseSymbol)
+		msg += fmt.Sprintf("\n  %s", baseSymbol)
 		for _, combination := range combinations {
+			msg += "\n   - ["
 			for _, order := range combination.SymbolOrders {
-				fmt.Printf("  %s", order.Symbol)
+				msg += fmt.Sprintf(" %s ", order.Symbol)
 			}
-			fmt.Println()
+			msg += "]"
 		}
 	}
-}
-
-// DEBUG
-func (tri *Tri) printSymbol(sym string) {
-	fmt.Printf("[%s] %s, Bid: %s, Ask: %s\n", tri.SymbolOrdersMap[sym].Ts.Format("2006-01-02 15:04:05"), sym, tri.SymbolOrdersMap[sym].Bid, tri.SymbolOrdersMap[sym].Ask)
+	log.Println(msg)
 }
