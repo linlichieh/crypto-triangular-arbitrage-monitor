@@ -27,10 +27,12 @@
     ],
     "ETHBTC": [
         { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"] },
-        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDT"] },
-        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDC"] },
-        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDC"] },
         { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDC"] },
+        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDC"] },
+        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDT"] },
+        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDC"] },
+        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDT"] },
+        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDC"] },
         { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDT"] }
     ],
     "WBTCUSDT": [
