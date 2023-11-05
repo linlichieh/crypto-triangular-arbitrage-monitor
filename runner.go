@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -104,7 +105,7 @@ func (or *OrderbookRunner) setOrder(symbol string, listener *OrderbookListener, 
 }
 
 func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener *OrderbookListener) {
-	var mostProfitPrice decimal.Decimal
+	var mostProfit decimal.Decimal
 	var mostProfitCombination *Combination
 
 	combinations := or.Tri.SymbolCombinationsMap[symbol]
@@ -135,20 +136,20 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 		result = thirdTrade.Truncate(4)
 
 		// Store most profitable combination
-		if result.GreaterThan(mostProfitPrice) {
-			mostProfitPrice = result
+		if result.GreaterThan(mostProfit) {
+			mostProfit = result
 			mostProfitCombination = combination
 		}
 	}
 
 	capital := decimal.NewFromInt(CAPITAL)
-	if mostProfitPrice.GreaterThan(capital) {
+	if mostProfit.GreaterThan(capital) {
 		msg := fmt.Sprintf(
 			"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)",
 			time.Now().Format("2006-01-02 15:04:05"),
 			symbol,
 			capital.String(),
-			mostProfitPrice.String(),
+			mostProfit.String(),
 			mostProfitCombination.SymbolOrders[0].Symbol,
 			mostProfitCombination.SymbolOrders[0].Bid.Price.String(),
 			mostProfitCombination.SymbolOrders[1].Symbol,
@@ -160,8 +161,7 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 		or.ChannelWatch <- msg
 	}
 
-	// Like health check
-	or.ChannelSystemLogs <- "."
+	or.ChannelSystemLogs <- strconv.FormatInt(mostProfit.IntPart(), 10)
 }
 
 // Send to slack every second in case hit the ceiling of rate limits
@@ -190,19 +190,20 @@ func (or *OrderbookRunner) sendToSystemLogs() {
 	ticker := time.NewTicker(time.Duration(SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND) * time.Second)
 	defer ticker.Stop()
 
-	var combinedMsg string
+	// To show counters for result e.g. `map[997:1762 998:466]` means result 997 gets 1762 times, 998 gets 466 times
+	counters := make(map[string]int64)
 	for {
 		select {
-		case msg := <-or.ChannelSystemLogs:
-			combinedMsg += msg
+		case result := <-or.ChannelSystemLogs:
+			counters[result]++
 		case <-ticker.C:
-			if combinedMsg == "" {
+			if len(counters) == 0 {
 				continue
 			}
-			go or.Messenger.sendToSystemLogs(fmt.Sprintf("Checked %d times", len(combinedMsg)))
+			go or.Messenger.sendToSystemLogs(fmt.Sprintf("%+v", counters))
 
 			// flush the combined message
-			combinedMsg = ""
+			counters = make(map[string]int64)
 		}
 	}
 }
