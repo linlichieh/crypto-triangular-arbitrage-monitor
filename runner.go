@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -32,24 +31,7 @@ type OrderbookRunner struct {
 type OrderbookListener struct {
 	lastTimeOfTriArbFound time.Time
 	ignoreIncomingOrder   bool
-	orderbookMessageCh    chan *OrderbookMsg
-}
-
-// Json
-type OrderbookMsg struct {
-	Topic string        `json:"topic"`
-	Ts    int64         `json:"ts"`   // ms
-	Type  string        `json:"type"` // Data type. snapshot,delta
-	Data  OrderbookData `json:"data"`
-}
-
-// Json
-type OrderbookData struct {
-	Symbol   string  `json:"s"`
-	Bids     []Price `json:"b"`
-	Asks     []Price `json:"a"`
-	UpdateId int64   `json:"u"`   // Update ID. Is a sequence. Occasionally, you'll receive "u"=1, which is a snapshot data due to the restart of the service. So please overwrite your local orderbook
-	Seq      int64   `json:"seq"` // You can use this field to compare different levels orderbook data, and for the smaller seq, then it means the data is generated earlier.
+	orderbookDataCh       chan *OrderbookData
 }
 
 func initOrderbookRunner(tri *Tri) *OrderbookRunner {
@@ -73,7 +55,7 @@ func (or *OrderbookRunner) setMessenger(messenger *Messenger) {
 func (or *OrderbookRunner) initOrderbookListeners() {
 	for symbol, _ := range or.Tri.SymbolOrdersMap {
 		or.OrderbookListeners[symbol] = &OrderbookListener{
-			orderbookMessageCh: make(chan *OrderbookMsg),
+			orderbookDataCh: make(chan *OrderbookData),
 		}
 	}
 }
@@ -92,7 +74,7 @@ func (or *OrderbookRunner) listenOrderbook(symbol string) {
 	listener := or.OrderbookListeners[symbol]
 	for {
 		select {
-		case orderbookMsg := <-listener.orderbookMessageCh:
+		case orderbookData := <-listener.orderbookDataCh:
 			if listener.ignoreIncomingOrder {
 				continue
 			}
@@ -103,20 +85,19 @@ func (or *OrderbookRunner) listenOrderbook(symbol string) {
 			}
 
 			listener.ignoreIncomingOrder = true
-			or.setOrder(symbol, listener, orderbookMsg)
+			or.setOrder(symbol, listener, orderbookData)
 		}
 	}
 }
 
-func (or *OrderbookRunner) setOrder(symbol string, listener *OrderbookListener, orderbookMsg *OrderbookMsg) {
+func (or *OrderbookRunner) setOrder(symbol string, listener *OrderbookListener, orderbookData *OrderbookData) {
 	defer func() { listener.ignoreIncomingOrder = false }()
 
-	ts := msToTime(orderbookMsg.Ts)
-	if len(orderbookMsg.Data.Bids) > 0 {
-		or.Tri.SetOrder(BID, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Bids[0])
+	if len(orderbookData.Bids) > 0 {
+		or.Tri.SetOrder(BID, orderbookData.Symbol, orderbookData.Bids[0], orderbookData.Seq)
 	}
-	if len(orderbookMsg.Data.Asks) > 0 {
-		or.Tri.SetOrder(ASK, ts, orderbookMsg.Data.Symbol, orderbookMsg.Data.Asks[0])
+	if len(orderbookData.Asks) > 0 {
+		or.Tri.SetOrder(ASK, orderbookData.Symbol, orderbookData.Asks[0], orderbookData.Seq)
 	}
 
 	or.calculateTriangularArbitrage(symbol, listener)
@@ -131,13 +112,13 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 		if len(combination.SymbolOrders) < 3 {
 			return
 		}
+		// Make sure all symbols get latest price
 		if combination.SymbolOrders[0].Bid == nil ||
 			combination.SymbolOrders[0].Ask == nil ||
 			combination.SymbolOrders[1].Bid == nil ||
 			combination.SymbolOrders[1].Ask == nil ||
 			combination.SymbolOrders[2].Bid == nil ||
 			combination.SymbolOrders[2].Ask == nil {
-			log.Println("Warning: at least one of bids or prices is nil, please wait for all prices are set")
 			return
 		}
 

@@ -17,7 +17,7 @@ func main() {
 
 	tri := initTri()
 	tri.setMessenger(messenger)
-	tri.printAllCombinations()
+	tri.printAllSymbols()
 
 	orderbookRunner := initOrderbookRunner(tri)
 	orderbookRunner.setMessenger(messenger)

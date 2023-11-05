@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/shopspring/decimal"
 )
@@ -44,9 +43,9 @@ type Combination struct {
 // orderbook
 type SymbolOrder struct {
 	Symbol string
-	Bid    *Order    // latest bid
-	Ask    *Order    // latest ask
-	Ts     time.Time // timestamp
+	Bid    *Order // latest bid
+	Ask    *Order // latest ask
+	Seq    int64
 }
 
 type Order struct {
@@ -102,8 +101,8 @@ func (tri *Tri) initWsKlines() (klines []string) {
 	return klines
 }
 
-func (tri *Tri) SetOrder(action string, ts time.Time, sym string, price Price) error {
-	tri.SymbolOrdersMap[sym].Ts = ts
+func (tri *Tri) SetOrder(action string, sym string, price Price, seq int64) error {
+	tri.SymbolOrdersMap[sym].Seq = seq
 	p, err := decimal.NewFromString(price[0])
 	if err != nil {
 		return err
@@ -119,6 +118,14 @@ func (tri *Tri) SetOrder(action string, ts time.Time, sym string, price Price) e
 		tri.SymbolOrdersMap[sym].Ask = &Order{Price: p, Size: s}
 	}
 	return nil
+}
+
+func (tri *Tri) printAllSymbols() {
+	var symbols []string
+	for symbol := range tri.SymbolOrdersMap {
+		symbols = append(symbols, symbol)
+	}
+	tri.Messenger.sendToSystemLogs(fmt.Sprintf("Symbols: %v", symbols))
 }
 
 func (tri *Tri) printAllCombinations() {
