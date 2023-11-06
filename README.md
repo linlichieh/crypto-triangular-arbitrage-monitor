@@ -11,21 +11,27 @@ This is a Go application for real-time detection of triangular arbitrage opportu
 
 # Run
 
-    make run
+```
+make run
+```
 
 # Deployment
 
 ### First time deployment
 
-    make first_time
+```
+make first_time
+```
 
 log in EC2
 
-    cd /home/ec2-user/app/
-    sudo cp crypto-triangular-arbitrage-watch.service /etc/systemd/system/
-    sudo systemctl daemon-reload
-    sudo systemctl start crypto-triangular-arbitrage-watch
-    sudo systemctl status crypto-triangular-arbitrage-watch
+```
+cd /home/ec2-user/app/
+sudo cp crypto-triangular-arbitrage-watch.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start crypto-triangular-arbitrage-watch
+sudo systemctl status crypto-triangular-arbitrage-watch
+```
 
 ### Deploy
 
@@ -35,4 +41,6 @@ log in EC2
 
 3) Run
 
-    make deploy
+```
+make deploy
+```
