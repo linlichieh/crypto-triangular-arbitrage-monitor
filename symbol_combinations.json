@@ -1,48 +1,34 @@
 {
-    "BTCUSDT": [
-        { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"] },
-        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDT"] },
-        { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDC"] },
-        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDT"] },
-        { "baseQuote": false, "symbols": ["BTCUSDT", "WBTCBTC", "WBTCUSDT"] }
-    ],
-    "ETHUSDT": [
-        { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"] },
-        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDT"] },
-        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDT"] },
-        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDC"] }
-    ],
-    "BTCUSDC": [
-        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDC"] },
-        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDC"] },
-        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDT"] },
-        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDC"] },
-        { "baseQuote": false, "symbols": ["BTCUSDC", "WBTCBTC", "WBTCUSDT"] }
-    ],
-    "ETHUSDC": [
-        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDC"] },
-        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDC"] },
-        { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDC"] },
-        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDT"] }
-    ],
-    "ETHBTC": [
-        { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"] },
-        { "baseQuote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDC"] },
-        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDC"] },
-        { "baseQuote": false, "symbols": ["BTCUSDC", "ETHBTC", "ETHUSDT"] },
-        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDC"] },
-        { "baseQuote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDT"] },
-        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDC"] },
-        { "baseQuote": true, "symbols": ["ETHUSDC", "ETHBTC", "BTCUSDT"] }
-    ],
-    "WBTCUSDT": [
-        { "baseQuote": true, "symbols": ["WBTCUSDT", "WBTCBTC", "BTCUSDT"] },
-        { "baseQuote": true, "symbols": ["WBTCUSDT", "WBTCBTC", "BTCUSDC"] }
-    ],
-    "WBTCBTC": [
-        { "baseQuote": true, "symbols": ["WBTCUSDT", "WBTCBTC", "BTCUSDT"] },
-        { "baseQuote": true, "symbols": ["WBTCUSDT", "WBTCBTC", "BTCUSDC"] },
-        { "baseQuote": false, "symbols": ["BTCUSDT", "WBTCBTC", "WBTCUSDT"] },
-        { "baseQuote": false, "symbols": ["BTCUSDC", "WBTCBTC", "WBTCUSDT"] }
+    "topics": {
+        "BTCUSDT":  "orderbook.1.BTCUSDT",
+        "ETHUSDT":  "orderbook.1.ETHUSDT",
+        "ETHBTC":   "orderbook.1.ETHBTC",
+        "WBTCUSDT": "orderbook.1.WBTCUSDT",
+        "WBTCBTC":  "orderbook.1.WBTCBTC",
+        "SOLUSDT":  "orderbook.1.SOLUSDT",
+        "SOLBTC":   "orderbook.1.SOLBTC"
+    },
+    "list": [
+        {
+            "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"] },
+                { "base_quote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "WBTCBTC", "WBTCUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "WBTCBTC", "WBTCUSDT"] },
+                { "base_quote": true, "symbols": ["WBTCUSDT", "WBTCBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["SOLUSDT", "SOLBTC", "BTCUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "SOLBTC", "SOLUSDT"] },
+                { "base_quote": true, "symbols": ["SOLUSDT", "SOLBTC", "BTCUSDT"] }
+            ]
+        }
     ]
 }

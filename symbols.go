@@ -14,28 +14,18 @@ const (
 	ASK = "ask"
 )
 
-var klinesMap = map[string]string{
-	"BTCUSDT":  "orderbook.1.BTCUSDT",
-	"ETHUSDT":  "orderbook.1.ETHUSDT",
-	"ETHBTC":   "orderbook.1.ETHBTC",
-	"BTCUSDC":  "orderbook.1.BTCUSDC",
-	"ETHUSDC":  "orderbook.1.ETHUSDC",
-	"WBTCUSDT": "orderbook.1.WBTCUSDT",
-	"WBTCBTC":  "orderbook.1.WBTCBTC",
-}
-
 // symbol -> potential combination
 type Tri struct {
 	SymbolOrdersMap       map[string]*SymbolOrder // to store bid and ask price for each symbol
 	SymbolCombinationsMap map[string][]*Combination
 	Messenger             *Messenger
+	OrderbookTopics       []string
 }
 
 // Combination is a paris of 3 symbols
 type Combination struct {
-	BaseQuote    bool `json:"baseQuote"` // e.g. for "ETHBTC", true will be ETH->BTC, false will be BTC->ETH
+	BaseQuote    bool
 	SymbolOrders []*SymbolOrder
-	Symbols      []string `json:"symbols"` // It's only for reading symbols from JSON
 }
 
 // orderbook
@@ -56,7 +46,7 @@ func initTri() *Tri {
 		SymbolOrdersMap:       make(map[string]*SymbolOrder),
 		SymbolCombinationsMap: make(map[string][]*Combination),
 	}
-	tri.loadSymbolCombinations()
+	tri.buildSymbolCombinations()
 	return tri
 }
 
@@ -64,39 +54,52 @@ func (tri *Tri) setMessenger(messenger *Messenger) {
 	tri.Messenger = messenger
 }
 
-func (tri *Tri) loadSymbolCombinations() {
-	tri.readSymbolsJson()
-	for _, combinations := range tri.SymbolCombinationsMap {
-		for _, combination := range combinations {
-			for _, symbol := range combination.Symbols {
-				if tri.SymbolOrdersMap[symbol] == nil {
-					tri.SymbolOrdersMap[symbol] = &SymbolOrder{Symbol: symbol}
-				}
-				combination.SymbolOrders = append(combination.SymbolOrders, tri.SymbolOrdersMap[symbol])
+func (tri *Tri) buildSymbolCombinations() {
+	data := tri.readSymbolsJson()
+
+	// Load orderbook topics
+	for _, topic := range data["topics"].(map[string]any) {
+		tri.OrderbookTopics = append(tri.OrderbookTopics, topic.(string))
+	}
+
+	// Load symbols combinations
+	for _, item := range data["list"].([]any) {
+		// symbols
+		for _, symbol := range item.(map[string]any)["symbols"].([]any) {
+			if tri.SymbolOrdersMap[symbol.(string)] == nil {
+				tri.SymbolOrdersMap[symbol.(string)] = &SymbolOrder{Symbol: symbol.(string)}
 			}
+		}
+
+		// combinations
+		var cs []*Combination
+		for _, combination := range item.(map[string]any)["combinations"].([]any) {
+			var c Combination
+			c.BaseQuote = combination.(map[string]any)["base_quote"].(bool)
+			for _, symbol := range combination.(map[string]any)["symbols"].([]any) {
+				c.SymbolOrders = append(c.SymbolOrders, tri.SymbolOrdersMap[symbol.(string)])
+			}
+			cs = append(cs, &c)
+		}
+
+		// Build relationships between symbols and combinations
+		for _, symbol := range item.(map[string]any)["symbols"].([]any) {
+			tri.SymbolCombinationsMap[symbol.(string)] = append(tri.SymbolCombinationsMap[symbol.(string)], cs...)
 		}
 	}
 }
 
-func (tri *Tri) readSymbolsJson() {
-	data, err := os.ReadFile("symbol_combinations.json")
+func (tri *Tri) readSymbolsJson() map[string]interface{} {
+	body, err := os.ReadFile("symbol_combinations.json")
 	if err != nil {
 		log.Fatalf("Error reading JSON file: %v", err)
 	}
-	err = json.Unmarshal(data, &tri.SymbolCombinationsMap)
+	data := make(map[string]any)
+	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Fatalf("Error unmarshaling JSON: %v", err)
 	}
-}
-
-func (tri *Tri) initWsKlines() (klines []string) {
-	for baseSymbol, _ := range tri.SymbolCombinationsMap {
-		if klinesMap[baseSymbol] == "" {
-			log.Fatalf("klinesMap misses %s", baseSymbol)
-		}
-		klines = append(klines, klinesMap[baseSymbol])
-	}
-	return klines
+	return data
 }
 
 func (tri *Tri) SetOrder(action string, sym string, price Price, seq int64) error {

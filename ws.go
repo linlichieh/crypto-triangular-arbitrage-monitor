@@ -11,11 +11,11 @@ import (
 )
 
 type WsClient struct {
-	Tri             *Tri
-	OrderbookRunner *OrderbookRunner
-	klines          []string
-	Messenger       *Messenger
-	Conn            *websocket.Conn
+	Tri               *Tri
+	OrderbookRunner   *OrderbookRunner
+	Messenger         *Messenger
+	Conn              *websocket.Conn
+	DebugPrintMessage bool
 }
 
 type MessageReq struct {
@@ -48,14 +48,10 @@ type OrderbookData struct {
 }
 
 func initWsClient(tri *Tri, orderbookRunner *OrderbookRunner) *WsClient {
-	klines := tri.initWsKlines()
-	if len(klines) == 0 {
-		log.Fatal("There is no klines to listen")
-	}
 	return &WsClient{
-		Tri:             tri,
-		OrderbookRunner: orderbookRunner,
-		klines:          klines,
+		Tri:               tri,
+		OrderbookRunner:   orderbookRunner,
+		DebugPrintMessage: viper.GetBool("DEBUG_PRINT_MESSAGE"),
 	}
 }
 
@@ -81,7 +77,7 @@ func (ws *WsClient) connect() error {
 	}
 	defer ws.Conn.Close()
 
-	if err = ws.Conn.WriteJSON(MessageReq{Op: "subscribe", Args: ws.klines}); err != nil {
+	if err = ws.Conn.WriteJSON(MessageReq{Op: "subscribe", Args: ws.Tri.OrderbookTopics}); err != nil {
 		return fmt.Errorf("failed to send op, err: %v", err)
 	}
 
@@ -101,6 +97,9 @@ func (ws *WsClient) connect() error {
 			_, message, err := ws.Conn.ReadMessage()
 			if err != nil {
 				return fmt.Errorf("failed to read message during running, err: %v", err)
+			}
+			if ws.DebugPrintMessage {
+				log.Println(string(message))
 			}
 			err = ws.handleResponse(message)
 			if err != nil {

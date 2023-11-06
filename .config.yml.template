@@ -1,10 +1,7 @@
 # ENV
-ENV: e.g. dev / prod
-LOG_PATH: e.g. logs/prod.log
-
-
-# DB
-DB_DSN: e.g. root:root@tcp(127.0.0.1:3306)/crypto?charset=utf8mb4&parseTime=true
+ENV: dev or prod
+DEBUG_PRINT_MESSAGE: false
+DEBUG_PRINT_MOST_PROFIT: false
 
 # BYBIT
 TESTNET_PUBLIC_WS_SPOT: wss://stream-testnet.bybit.com/v5/public/spot
@@ -14,7 +11,7 @@ API_SECRET:
 
 # Slack
 SLACK_TOKEN:
-SLACK_SEND_MESSAGE_URL: e.g. https://slack.com/api/chat.postMessage
+SLACK_SEND_MESSAGE_URL: https://slack.com/api/chat.postMessage
 SLACK_DEV_CHANNEL_WATCH: dev-watch
 SLACK_DEV_CHANNEL_SYSTEM_LOGS: dev-system-logs
 SLACK_PROD_CHANNEL_WATCH: prod-watch

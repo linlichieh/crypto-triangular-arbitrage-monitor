@@ -14,10 +14,13 @@ func main() {
 	messenger := initMessenger()
 	messenger.sendToSystemLogs("Config has been loaded successfully.")
 	messenger.sendToSystemLogs(fmt.Sprintf("ENV: %s", viper.GetString("ENV")))
+	log.Println("DEBUG_PRINT_MESSAGE:", viper.GetBool("DEBUG_PRINT_MESSAGE"))
+	log.Println("DEBUG_PRINT_MOST_PROFIT:", viper.GetBool("DEBUG_PRINT_MOST_PROFIT"))
 
 	tri := initTri()
 	tri.setMessenger(messenger)
 	tri.printAllSymbols()
+	// tri.printAllCombinations()
 
 	orderbookRunner := initOrderbookRunner(tri)
 	orderbookRunner.setMessenger(messenger)
