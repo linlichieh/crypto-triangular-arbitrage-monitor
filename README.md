@@ -29,4 +29,10 @@ log in EC2
 
 ### Deploy
 
+1) Copy `config.yml` to `prod-config.yml`
+
+2) Change `ENV` to `prod` in `prod-config.yml`
+
+3) Run
+
     make deploy
