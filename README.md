@@ -44,3 +44,12 @@ sudo systemctl status crypto-triangular-arbitrage-watch
 ```
 make deploy
 ```
+
+# Debug mode
+
+`config.yml`:
+
+```
+DEBUG_PRINT_MESSAGE: true
+DEBUG_PRINT_MOST_PROFIT: true
+```

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -14,7 +15,6 @@ type WsClient struct {
 	Tri               *Tri
 	OrderbookRunner   *OrderbookRunner
 	Messenger         *Messenger
-	Conn              *websocket.Conn
 	DebugPrintMessage bool
 	ListeningTopics   []string
 }
@@ -60,30 +60,47 @@ func (ws *WsClient) setMessenger(messenger *Messenger) {
 	ws.Messenger = messenger
 }
 
-func (ws *WsClient) ConnectToBybit() {
-	for {
-		if err := ws.connect(); err != nil {
-			ws.Messenger.sendToSystemLogs(fmt.Sprintf("Websocket error: %v", err))
+func (ws *WsClient) HandleConnections() {
+	var wg sync.WaitGroup
+	topics := ws.getListeningTopics()
+	chunkSize := 10 // bybit only accepts up to 10 symbols per connection
+	connNum := 1
+	for i := 0; i < len(topics); i += chunkSize {
+		end := i + chunkSize
+		if end > len(topics) {
+			end = len(topics)
 		}
-		ws.Messenger.sendToSystemLogs("Reconnecting...")
+		wg.Add(1)
+		go ws.connectWithRetry(connNum, topics[i:end])
+		connNum++
+	}
+	wg.Wait()
+}
+
+func (ws *WsClient) connectWithRetry(connNum int, topics []string) {
+	for {
+		if err := ws.connect(connNum, topics); err != nil {
+			ws.Messenger.sendToSystemLogs(fmt.Sprintf("Connection(%d) error: %v", connNum, err))
+		}
+		ws.Messenger.sendToSystemLogs(fmt.Sprintf("Connection(%d) reconnecting...", connNum))
 		time.Sleep(3 * time.Second)
 	}
 }
 
-func (ws *WsClient) connect() error {
+func (ws *WsClient) connect(connNum int, topics []string) error {
 	var err error
-	ws.Conn, _, err = websocket.DefaultDialer.Dial(viper.GetString("MAINNET_PUBLIC_WS_SPOT"), nil)
+	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("MAINNET_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
 		return fmt.Errorf("failed to dial, err: %v", err)
 	}
-	defer ws.Conn.Close()
+	defer conn.Close()
 
-	if err = ws.Conn.WriteJSON(MessageReq{Op: "subscribe", Args: ws.getListeningTopics()}); err != nil {
+	if err = conn.WriteJSON(MessageReq{Op: "subscribe", Args: topics}); err != nil {
 		return fmt.Errorf("failed to send op, err: %v", err)
 	}
 
 	// Handle incoming messages
-	ws.Messenger.sendToSystemLogs("Listening...")
+	ws.Messenger.sendToSystemLogs(fmt.Sprintf("Connection(%d) listening...", connNum))
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -91,11 +108,11 @@ func (ws *WsClient) connect() error {
 		case <-ticker.C:
 			// Bybit recommends client to send the ping heartbeat packet every 20 seconds to maintain the WebSocket connection.
 			// Otherwise, established connection will close after 5 minutes.
-			if err = ws.Conn.WriteJSON(MessageReq{Op: "ping"}); err != nil {
+			if err = conn.WriteJSON(MessageReq{Op: "ping"}); err != nil {
 				return fmt.Errorf("failed to send op, err: %v", err)
 			}
 		default:
-			_, message, err := ws.Conn.ReadMessage()
+			_, message, err := conn.ReadMessage()
 			if err != nil {
 				return fmt.Errorf("failed to read message during running, err: %v", err)
 			}

@@ -8,9 +8,18 @@
         "SOLUSDT":  "orderbook.1.SOLUSDT",
         "SOLBTC":   "orderbook.1.SOLBTC",
         "XRPBTC":   "orderbook.1.XRPBTC",
-        "XRPUSDT":  "orderbook.1.XRPUSDT"
+        "XRPUSDT":  "orderbook.1.XRPUSDT",
+        "XLMBTC":   "orderbook.1.XLMBTC",
+        "XLMUSDT":  "orderbook.1.XLMUSDT"
     },
     "list": [
+        {
+            "symbols": ["XLMUSDT", "XLMBTC", "BTCUSDT"],
+            "combinations": [
+                { "base_quote": true, "symbols": ["XLMUSDT", "XLMBTC", "BTCUSDT"] },
+                { "base_quote": false, "symbols": ["BTCUSDT", "XLMBTC", "XLMUSDT"] }
+            ]
+        },
         {
             "symbols": ["BTCUSDT", "XRPBTC", "XRPUSDT"],
             "combinations": [
