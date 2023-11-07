@@ -19,7 +19,7 @@ type Tri struct {
 	SymbolOrdersMap       map[string]*SymbolOrder // to store bid and ask price for each symbol
 	SymbolCombinationsMap map[string][]*Combination
 	Messenger             *Messenger
-	OrderbookTopics       []string
+	OrderbookTopics       map[string]string
 }
 
 // Combination is a paris of 3 symbols
@@ -45,6 +45,7 @@ func initTri() *Tri {
 	tri := &Tri{
 		SymbolOrdersMap:       make(map[string]*SymbolOrder),
 		SymbolCombinationsMap: make(map[string][]*Combination),
+		OrderbookTopics:       make(map[string]string),
 	}
 	tri.buildSymbolCombinations()
 	return tri
@@ -58,8 +59,8 @@ func (tri *Tri) buildSymbolCombinations() {
 	data := tri.readSymbolsJson()
 
 	// Load orderbook topics
-	for _, topic := range data["topics"].(map[string]any) {
-		tri.OrderbookTopics = append(tri.OrderbookTopics, topic.(string))
+	for symbol, topic := range data["topics"].(map[string]any) {
+		tri.OrderbookTopics[symbol] = topic.(string)
 	}
 
 	// Load symbols combinations

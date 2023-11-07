@@ -16,6 +16,7 @@ type WsClient struct {
 	Messenger         *Messenger
 	Conn              *websocket.Conn
 	DebugPrintMessage bool
+	ListeningTopics   []string
 }
 
 type MessageReq struct {
@@ -77,7 +78,7 @@ func (ws *WsClient) connect() error {
 	}
 	defer ws.Conn.Close()
 
-	if err = ws.Conn.WriteJSON(MessageReq{Op: "subscribe", Args: ws.Tri.OrderbookTopics}); err != nil {
+	if err = ws.Conn.WriteJSON(MessageReq{Op: "subscribe", Args: ws.getListeningTopics()}); err != nil {
 		return fmt.Errorf("failed to send op, err: %v", err)
 	}
 
@@ -128,4 +129,15 @@ func (ws *WsClient) handleResponse(message []byte) error {
 		ws.OrderbookRunner.OrderbookListeners[response.Data.Symbol].orderbookDataCh <- &response.Data
 	}
 	return nil
+}
+
+func (ws *WsClient) getListeningTopics() []string {
+	var topics []string
+	for symbol, _ := range ws.Tri.SymbolCombinationsMap {
+		if _, ok := ws.Tri.OrderbookTopics[symbol]; !ok {
+			log.Fatalf("Please confirm that orderbook topic of '%s' exists in the config", symbol)
+		}
+		topics = append(topics, ws.Tri.OrderbookTopics[symbol])
+	}
+	return topics
 }
