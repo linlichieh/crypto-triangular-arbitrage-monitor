@@ -11,13 +11,16 @@ import (
 )
 
 // Rate limit for triangular arbitrage happens
-const TRI_ARB_FOUND_INTERVAL_MILLISECOND = 500
+const TRI_ARB_FOUND_INTERVAL_MILLISECOND = 300
 
 // Slack
-const SEND_TO_WATCH_INTERVAL_MILLISECOND = 1100
+const SEND_TO_WATCH_INTERVAL_SECOND = 2
 const SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND = 30
 
 const CAPITAL = 1000
+
+// If the combination can do more than ? dollar profit, then do this trade
+const EACH_TRADE_TARGET_PROFIT_DOLLAR = 1
 
 type Price []string
 
@@ -153,19 +156,17 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 
 	capital := decimal.NewFromInt(CAPITAL)
 	msg := fmt.Sprintf(
-		"%s %s %s->%s   %s (bid: %s) -> %s (ask: %s) -> %s (ask: %s)",
-		time.Now().Format("2006-01-02 15:04:05"),
-		symbol,
+		"%s %s->%s  [%s]  %s -> %s -> %s",
+		time.Now().Format("15:04:05"),
 		capital.String(),
-		mostProfitBalance.String(),
+		mostProfitBalance.StringFixed(1),
+		symbol,
 		mostProfitCombination.SymbolOrders[0].Symbol,
-		mostProfitCombination.SymbolOrders[0].Bid.Price.String(),
 		mostProfitCombination.SymbolOrders[1].Symbol,
-		mostProfitCombination.SymbolOrders[1].Bid.Price.String(),
 		mostProfitCombination.SymbolOrders[2].Symbol,
-		mostProfitCombination.SymbolOrders[2].Bid.Price.String(),
 	)
-	if mostProfitBalance.GreaterThan(capital) {
+	profit := mostProfitBalance.Sub(capital)
+	if profit.GreaterThanOrEqual(decimal.NewFromInt(EACH_TRADE_TARGET_PROFIT_DOLLAR)) {
 		listener.lastTimeOfTriArbFound = time.Now()
 		or.ChannelWatch <- msg
 	}
@@ -179,7 +180,7 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 
 // Send to slack every second in case hit the ceiling of rate limits
 func (or *OrderbookRunner) handleChannelWatch() {
-	ticker := time.NewTicker(time.Duration(SEND_TO_WATCH_INTERVAL_MILLISECOND) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(SEND_TO_WATCH_INTERVAL_SECOND) * time.Second)
 	defer ticker.Stop()
 
 	var combinedMsg string
