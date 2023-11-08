@@ -73,20 +73,10 @@ func (m *Messenger) sendSlackNotification(channel string, msg string) error {
 	return nil
 }
 
-// System log
-func (m *Messenger) sendToSystemLogs(msg string) {
+func (m *Messenger) sendToChannel(channel string, msg string) {
 	log.Println(msg)
-	err := m.sendSlackNotification(m.Channel.SystemLogs, msg)
+	err := m.sendSlackNotification(channel, msg)
 	if err != nil {
-		log.Printf("Error sending message to '%s': %v\n", m.Channel.SystemLogs, err)
-	}
-}
-
-// Triangular arbitrage found
-func (m *Messenger) sendToWatch(msg string) {
-	log.Println(msg)
-	err := m.sendSlackNotification(m.Channel.Watch, "<!everyone>\n"+msg)
-	if err != nil {
-		log.Printf("Error sending message to '%s': %v\n", m.Channel.Watch, err)
+		log.Printf("Error sending message to '%s': %v\n", channel, err)
 	}
 }

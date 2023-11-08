@@ -80,9 +80,9 @@ func (ws *WsClient) HandleConnections() {
 func (ws *WsClient) connectWithRetry(connNum int, topics []string) {
 	for {
 		if err := ws.connect(connNum, topics); err != nil {
-			ws.Messenger.sendToSystemLogs(fmt.Sprintf("Connection(%d) error: %v", connNum, err))
+			ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, fmt.Sprintf("Connection(%d) error: %v", connNum, err))
 		}
-		ws.Messenger.sendToSystemLogs(fmt.Sprintf("Connection(%d) reconnecting...", connNum))
+		ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, fmt.Sprintf("Connection(%d) reconnecting...", connNum))
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -100,7 +100,7 @@ func (ws *WsClient) connect(connNum int, topics []string) error {
 	}
 
 	// Handle incoming messages
-	ws.Messenger.sendToSystemLogs(fmt.Sprintf("Connection(%d) listening...", connNum))
+	ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, fmt.Sprintf("Connection(%d) listening...", connNum))
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 	for {

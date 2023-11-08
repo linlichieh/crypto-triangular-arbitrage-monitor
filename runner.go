@@ -71,8 +71,8 @@ func (or *OrderbookRunner) ListenAll() {
 	}
 
 	// Send messages to slack
-	go or.sendToWatch()
-	go or.sendToSystemLogs()
+	go or.handleChannelWatch()
+	go or.handleChannelSystemLogs()
 }
 
 func (or *OrderbookRunner) listenOrderbook(symbol string) {
@@ -178,7 +178,7 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 }
 
 // Send to slack every second in case hit the ceiling of rate limits
-func (or *OrderbookRunner) sendToWatch() {
+func (or *OrderbookRunner) handleChannelWatch() {
 	ticker := time.NewTicker(time.Duration(SEND_TO_WATCH_INTERVAL_MILLISECOND) * time.Millisecond)
 	defer ticker.Stop()
 
@@ -191,7 +191,7 @@ func (or *OrderbookRunner) sendToWatch() {
 			if combinedMsg == "" {
 				continue
 			}
-			go or.Messenger.sendToWatch(combinedMsg)
+			go or.Messenger.sendToChannel(or.Messenger.Channel.Watch, combinedMsg)
 
 			// flush the combined message
 			combinedMsg = ""
@@ -199,7 +199,7 @@ func (or *OrderbookRunner) sendToWatch() {
 	}
 }
 
-func (or *OrderbookRunner) sendToSystemLogs() {
+func (or *OrderbookRunner) handleChannelSystemLogs() {
 	ticker := time.NewTicker(time.Duration(SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND) * time.Second)
 	defer ticker.Stop()
 
@@ -213,7 +213,7 @@ func (or *OrderbookRunner) sendToSystemLogs() {
 			if len(counters) == 0 {
 				continue
 			}
-			go or.Messenger.sendToSystemLogs(fmt.Sprintf("%+v", counters))
+			go or.Messenger.sendToChannel(or.Messenger.Channel.SystemLogs, fmt.Sprintf("%+v", counters))
 
 			// flush the combined message
 			counters = make(map[string]int64)

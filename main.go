@@ -12,8 +12,8 @@ func main() {
 	loadEnvConfig()
 
 	messenger := initMessenger()
-	messenger.sendToSystemLogs("Config has been loaded successfully.")
-	messenger.sendToSystemLogs(fmt.Sprintf("ENV: %s", viper.GetString("ENV")))
+	messenger.sendToChannel(messenger.Channel.SystemLogs, "Config has been loaded successfully.")
+	messenger.sendToChannel(messenger.Channel.SystemLogs, fmt.Sprintf("ENV: %s", viper.GetString("ENV")))
 	log.Println("DEBUG_PRINT_MESSAGE:", viper.GetBool("DEBUG_PRINT_MESSAGE"))
 	log.Println("DEBUG_PRINT_MOST_PROFIT:", viper.GetBool("DEBUG_PRINT_MOST_PROFIT"))
 
