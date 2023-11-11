@@ -4,21 +4,16 @@ DEBUG_PRINT_MESSAGE: false
 DEBUG_PRINT_MOST_PROFIT: false
 
 # BYBIT
-TESTNET_PUBLIC_WS_SPOT: wss://stream-testnet.bybit.com/v5/public/spot
-TESTNET_PRIVATE_WS: wss://stream-testnet.bybit.com/v5/private
-MAINNET_PUBLIC_WS_SPOT: wss://stream.bybit.com/v5/public/spot
-MAINNET_PRIVATE_WS: wss://stream.bybit.com/v5/private
+BYBIT_PUBLIC_WS_SPOT: wss://stream-testnet.bybit.com/v5/public/spot
+BYBIT_PRIVATE_WS: wss://stream-testnet.bybit.com/v5/private
 
-TESTNET_API_HOST: https://api-testnet.bybit.com
-MAINNET_API_HOST: https://api.bybit.com
+BYBIT_API_HOST: https://api-testnet.bybit.com
 
-TESTNET_API_KEY:
-TESTNET_API_SECRET:
+BYBIT_API_KEY:
+BYBIT_API_SECRET:
 
 # Slack
 SLACK_TOKEN:
 SLACK_SEND_MESSAGE_URL: https://slack.com/api/chat.postMessage
-SLACK_DEV_CHANNEL_WATCH:
-SLACK_DEV_CHANNEL_SYSTEM_LOGS:
-SLACK_PROD_CHANNEL_WATCH:
-SLACK_PROD_CHANNEL_SYSTEM_LOGS:
+SLACK_CHANNEL_WATCH: dev-watch
+SLACK_CHANNEL_SYSTEM_LOGS: dev-system-logs

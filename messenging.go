@@ -24,11 +24,11 @@ type Channel struct {
 func initMessenger() *Messenger {
 	channel := Channel{}
 	if viper.GetString("ENV") == "prod" {
-		channel.Watch = viper.GetString("SLACK_PROD_CHANNEL_WATCH")
-		channel.SystemLogs = viper.GetString("SLACK_PROD_CHANNEL_SYSTEM_LOGS")
+		channel.Watch = viper.GetString("SLACK_CHANNEL_WATCH")
+		channel.SystemLogs = viper.GetString("SLACK_CHANNEL_SYSTEM_LOGS")
 	} else {
-		channel.Watch = viper.GetString("SLACK_DEV_CHANNEL_WATCH")
-		channel.SystemLogs = viper.GetString("SLACK_DEV_CHANNEL_SYSTEM_LOGS")
+		channel.Watch = viper.GetString("SLACK_CHANNEL_WATCH")
+		channel.SystemLogs = viper.GetString("SLACK_CHANNEL_SYSTEM_LOGS")
 	}
 
 	return &Messenger{

@@ -70,9 +70,9 @@ Sell BTC with qty=0.000294
 
 # TODO
 
-* split the config into `Dev` and `Prod`
 * profit > 0.001
     * compare all price * qty and choose the lowest money to put in as the first trade
 * graceful shutdown
 * mysql to store the process of trade
 * Add unit test
+* ISSUE: sell response `"cumExecQty":"0.000298"` but it's `0.00029772` on bybit dashboard

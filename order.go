@@ -25,7 +25,8 @@ func PlaceOrder() {
 			orderId": "1551477564315538944",
 						"orderLinkId": "1551477564315538945"
 	*/
-	client := bybit.NewBybitHttpClient(viper.GetString("TESTNET_API_KEY"), viper.GetString("TESTNET_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
+	// TODO FIXME dev: bybit.TESTNET  prod: ???
+	client := bybit.NewBybitHttpClient(viper.GetString("BYBIT_API_KEY"), viper.GetString("BYBIT_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
 	params := map[string]interface{}{
 		"category":  CATEGORY_SPOT,
 		"symbol":    "BTCUSDT",

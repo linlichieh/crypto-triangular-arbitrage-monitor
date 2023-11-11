@@ -51,7 +51,7 @@ func loadEnvConfig() {
 }
 
 func buy(qty string) {
-	client := bybit.NewBybitHttpClient(viper.GetString("TESTNET_API_KEY"), viper.GetString("TESTNET_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
+	client := bybit.NewBybitHttpClient(viper.GetString("BYBIT_API_KEY"), viper.GetString("BYBIT_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
 	params := map[string]interface{}{
 		"category":  CATEGORY_SPOT,
 		"symbol":    "BTCUSDT",
@@ -73,7 +73,7 @@ func buy(qty string) {
 }
 
 func sell(qty string) {
-	client := bybit.NewBybitHttpClient(viper.GetString("TESTNET_API_KEY"), viper.GetString("TESTNET_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
+	client := bybit.NewBybitHttpClient(viper.GetString("BYBIT_API_KEY"), viper.GetString("BYBIT_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
 	params := map[string]interface{}{
 		"category":  CATEGORY_SPOT,
 		"symbol":    "BTCUSDT",

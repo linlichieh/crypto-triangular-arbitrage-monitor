@@ -73,9 +73,9 @@ func (ws *WsClient) HandleOrderConnection() {
 
 func (ws *WsClient) listenOrderStatus() error {
 	conn := bybit.NewBybitPrivateWebSocket(
-		viper.GetString("TESTNET_PRIVATE_WS"),
-		viper.GetString("TESTNET_API_KEY"),
-		viper.GetString("TESTNET_API_SECRET"),
+		viper.GetString("BYBIT_PRIVATE_WS"),
+		viper.GetString("BYBIT_API_KEY"),
+		viper.GetString("BYBIT_API_SECRET"),
 		func(message string) error {
 			// TODO send to system logs ???
 			// https://bybit-exchange.github.io/docs/v5/websocket/private/order
@@ -235,7 +235,7 @@ func (ws *WsClient) listenOrderbooksWithRetry(connNum int, topics []string) {
 
 func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 	var err error
-	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("TESTNET_PUBLIC_WS_SPOT"), nil)
+	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("BYBIT_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
 		return fmt.Errorf("failed to dial, err: %v", err)
 	}
