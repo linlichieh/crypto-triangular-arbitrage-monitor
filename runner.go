@@ -19,8 +19,8 @@ const SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND = 30
 
 const CAPITAL = 1000
 
-// If the combination can do more than ? dollar profit, then do this trade
-const EACH_TRADE_TARGET_PROFIT_DOLLAR = 1
+// Only place the order when it is over the target profit threshold
+const TARGET_PROFIT_FOR_TRADE = 0.001
 
 type Price []string
 
@@ -30,8 +30,8 @@ type OrderbookRunner struct {
 	NetPercent           decimal.Decimal
 	OrderbookListeners   map[string]*OrderbookListener
 	Messenger            *Messenger
-	ChannelWatch         chan string // Message queue
-	ChannelSystemLogs    chan string
+	ChannelWatch         chan *MostProfit
+	ChannelSystemLogs    chan *MostProfit
 	DebugPrintMostProfit bool
 }
 
@@ -41,6 +41,15 @@ type OrderbookListener struct {
 	orderbookDataCh       chan *OrderbookData
 }
 
+type MostProfit struct {
+	// Which symbol trigger the combination calculation
+	Symbol string
+	// Store the balance for the most profitable combination
+	RemainingBalance decimal.Decimal
+	// Store the most profitable combination
+	Combination *Combination
+}
+
 func initOrderbookRunner(tri *Tri) *OrderbookRunner {
 	fee := decimal.NewFromFloat(0.001)
 	orderbookRunner := &OrderbookRunner{
@@ -48,8 +57,8 @@ func initOrderbookRunner(tri *Tri) *OrderbookRunner {
 		NetPercent:           decimal.NewFromInt(1).Sub(fee),
 		Tri:                  tri,
 		OrderbookListeners:   make(map[string]*OrderbookListener),
-		ChannelWatch:         make(chan string),
-		ChannelSystemLogs:    make(chan string),
+		ChannelWatch:         make(chan *MostProfit),
+		ChannelSystemLogs:    make(chan *MostProfit),
 		DebugPrintMostProfit: viper.GetBool("DEBUG_PRINT_MOST_PROFIT"),
 	}
 	orderbookRunner.initOrderbookListeners()
@@ -112,10 +121,7 @@ func (or *OrderbookRunner) setOrder(symbol string, listener *OrderbookListener, 
 }
 
 func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener *OrderbookListener) {
-	// Store the balance for the most profitable combination
-	var mostProfitBalance decimal.Decimal
-	// Store the most profitable combination
-	var mostProfitCombination *Combination
+	mostProfit := MostProfit{Symbol: symbol}
 
 	combinations := or.Tri.SymbolCombinationsMap[symbol]
 	if len(combinations) == 0 {
@@ -148,34 +154,23 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 		balance = thirdTrade.Truncate(4)
 
 		// Store most profitable combination
-		if balance.GreaterThan(mostProfitBalance) {
-			mostProfitBalance = balance
-			mostProfitCombination = combination
+		if balance.GreaterThan(mostProfit.RemainingBalance) {
+			mostProfit.RemainingBalance = balance
+			mostProfit.Combination = combination
 		}
 	}
 
 	capital := decimal.NewFromInt(CAPITAL)
-	msg := fmt.Sprintf(
-		"%s %s->%s  [%s]  %s -> %s -> %s",
-		time.Now().Format("15:04:05"),
-		capital.String(),
-		mostProfitBalance.StringFixed(1),
-		symbol,
-		mostProfitCombination.SymbolOrders[0].Symbol,
-		mostProfitCombination.SymbolOrders[1].Symbol,
-		mostProfitCombination.SymbolOrders[2].Symbol,
-	)
-	profit := mostProfitBalance.Sub(capital)
-	if profit.GreaterThanOrEqual(decimal.NewFromInt(EACH_TRADE_TARGET_PROFIT_DOLLAR)) {
+	profitPercent := mostProfit.RemainingBalance.Sub(capital).Div(capital)
+	if profitPercent.GreaterThanOrEqual(decimal.NewFromFloat(TARGET_PROFIT_FOR_TRADE)) {
 		listener.lastTimeOfTriArbFound = time.Now()
-		or.ChannelWatch <- msg
+		or.ChannelWatch <- &mostProfit
 	}
+	or.ChannelSystemLogs <- &mostProfit
 
 	if or.DebugPrintMostProfit {
-		log.Println(msg)
+		log.Println(mostProfit.tradeMsg())
 	}
-
-	or.ChannelSystemLogs <- strconv.FormatInt(mostProfitBalance.IntPart(), 10)
 }
 
 // Send to slack every second in case hit the ceiling of rate limits
@@ -184,18 +179,26 @@ func (or *OrderbookRunner) handleChannelWatch() {
 	defer ticker.Stop()
 
 	var combinedMsg string
+	mostProfitMap := make(map[*Combination]*MostProfit)
 	for {
 		select {
-		case msg := <-or.ChannelWatch:
-			combinedMsg += fmt.Sprintf("%s\n", msg)
+		case mostProfit := <-or.ChannelWatch:
+			if _, ok := mostProfitMap[mostProfit.Combination]; !ok {
+				mostProfitMap[mostProfit.Combination] = mostProfit
+			}
 		case <-ticker.C:
-			if combinedMsg == "" {
+			if len(mostProfitMap) == 0 {
 				continue
+			}
+
+			for _, mostProfit := range mostProfitMap {
+				combinedMsg += fmt.Sprintf("%s\n", mostProfit.tradeMsg())
 			}
 			go or.Messenger.sendToChannel(or.Messenger.Channel.Watch, combinedMsg)
 
 			// flush the combined message
 			combinedMsg = ""
+			mostProfitMap = make(map[*Combination]*MostProfit)
 		}
 	}
 }
@@ -208,16 +211,30 @@ func (or *OrderbookRunner) handleChannelSystemLogs() {
 	counters := make(map[string]int64)
 	for {
 		select {
-		case result := <-or.ChannelSystemLogs:
-			counters[result]++
+		case mostProfit := <-or.ChannelSystemLogs:
+			balance := strconv.FormatInt(mostProfit.RemainingBalance.IntPart(), 10)
+			counters[balance]++
 		case <-ticker.C:
 			if len(counters) == 0 {
 				continue
 			}
-			go or.Messenger.sendToChannel(or.Messenger.Channel.SystemLogs, fmt.Sprintf("%+v", counters))
+			go or.Messenger.sendToChannel(or.Messenger.Channel.SystemLogs, fmt.Sprintf("%s %+v", time.Now().Format("15:04:05"), counters))
 
 			// flush the combined message
 			counters = make(map[string]int64)
 		}
 	}
+}
+
+func (p *MostProfit) tradeMsg() string {
+	return fmt.Sprintf(
+		"%s %s->%s  [%s]  %s -> %s -> %s",
+		time.Now().Format("15:04:05"),
+		decimal.NewFromInt(CAPITAL).String(),
+		p.RemainingBalance.StringFixed(1),
+		p.Symbol,
+		p.Combination.SymbolOrders[0].Symbol,
+		p.Combination.SymbolOrders[1].Symbol,
+		p.Combination.SymbolOrders[2].Symbol,
+	)
 }
