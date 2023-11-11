@@ -218,7 +218,7 @@ func (or *OrderbookRunner) handleChannelSystemLogs() {
 			if len(counters) == 0 {
 				continue
 			}
-			go or.Messenger.sendToChannel(or.Messenger.Channel.SystemLogs, fmt.Sprintf("%s %+v", time.Now().Format("15:04:05"), counters))
+			go or.Messenger.sendToChannel(or.Messenger.Channel.SystemLogs, fmt.Sprintf("%s %+v", time.Now().UTC().Add(8*time.Hour).Format("15:04:05"), counters))
 
 			// flush the combined message
 			counters = make(map[string]int64)
@@ -229,7 +229,7 @@ func (or *OrderbookRunner) handleChannelSystemLogs() {
 func (p *MostProfit) tradeMsg() string {
 	return fmt.Sprintf(
 		"%s %s->%s  [%s]  %s -> %s -> %s",
-		time.Now().Format("15:04:05"),
+		time.Now().UTC().Add(8*time.Hour).Format("15:04:05"),
 		decimal.NewFromInt(CAPITAL).String(),
 		p.RemainingBalance.StringFixed(1),
 		p.Symbol,
