@@ -1,18 +1,24 @@
 # ENV
-ENV: dev or prod
+ENV: dev
 DEBUG_PRINT_MESSAGE: false
 DEBUG_PRINT_MOST_PROFIT: false
 
 # BYBIT
 TESTNET_PUBLIC_WS_SPOT: wss://stream-testnet.bybit.com/v5/public/spot
+TESTNET_PRIVATE_WS: wss://stream-testnet.bybit.com/v5/private
 MAINNET_PUBLIC_WS_SPOT: wss://stream.bybit.com/v5/public/spot
-API_KEY:
-API_SECRET:
+MAINNET_PRIVATE_WS: wss://stream.bybit.com/v5/private
+
+TESTNET_API_HOST: https://api-testnet.bybit.com
+MAINNET_API_HOST: https://api.bybit.com
+
+TESTNET_API_KEY:
+TESTNET_API_SECRET:
 
 # Slack
 SLACK_TOKEN:
 SLACK_SEND_MESSAGE_URL: https://slack.com/api/chat.postMessage
-SLACK_DEV_CHANNEL_WATCH: dev-watch
-SLACK_DEV_CHANNEL_SYSTEM_LOGS: dev-system-logs
-SLACK_PROD_CHANNEL_WATCH: prod-watch
-SLACK_PROD_CHANNEL_SYSTEM_LOGS: prod-system-logs
+SLACK_DEV_CHANNEL_WATCH:
+SLACK_DEV_CHANNEL_SYSTEM_LOGS:
+SLACK_PROD_CHANNEL_WATCH:
+SLACK_PROD_CHANNEL_SYSTEM_LOGS:

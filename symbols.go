@@ -56,7 +56,7 @@ func (tri *Tri) setMessenger(messenger *Messenger) {
 }
 
 func (tri *Tri) buildSymbolCombinations() {
-	data := tri.readSymbolsJson()
+	data := tri.loadSymbolsJson()
 
 	// Load orderbook topics
 	for symbol, topic := range data["topics"].(map[string]any) {
@@ -90,7 +90,7 @@ func (tri *Tri) buildSymbolCombinations() {
 	}
 }
 
-func (tri *Tri) readSymbolsJson() map[string]interface{} {
+func (tri *Tri) loadSymbolsJson() map[string]interface{} {
 	body, err := os.ReadFile("symbol_combinations.json")
 	if err != nil {
 		log.Fatalf("Error reading JSON file: %v", err)

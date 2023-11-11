@@ -53,3 +53,26 @@ make deploy
 DEBUG_PRINT_MESSAGE: true
 DEBUG_PRINT_MOST_PROFIT: true
 ```
+
+# Manual test
+
+Run (optional, it's just for receiving order status)
+
+    make run
+
+Buy BTC with $10 USDT
+
+    make buy QTY=10
+
+Sell BTC with qty=0.000294
+
+    make sell QTY=0.000294
+
+# TODO
+
+* split the config into `Dev` and `Prod`
+* profit > 0.001
+    * compare all price * qty and choose the lowest money to put in as the first trade
+* graceful shutdown
+* mysql to store the process of trade
+* Add unit test

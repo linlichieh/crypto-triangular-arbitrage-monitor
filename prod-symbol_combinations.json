@@ -1,0 +1,115 @@
+{
+    "topics": {
+        "BTCUSDT":  "orderbook.1.BTCUSDT",
+        "ETHUSDT":  "orderbook.1.ETHUSDT",
+        "ETHBTC":   "orderbook.1.ETHBTC",
+        "WBTCUSDT": "orderbook.1.WBTCUSDT",
+        "WBTCBTC":  "orderbook.1.WBTCBTC",
+        "SOLUSDT":  "orderbook.1.SOLUSDT",
+        "SOLBTC":   "orderbook.1.SOLBTC",
+        "XRPBTC":   "orderbook.1.XRPBTC",
+        "XRPUSDT":  "orderbook.1.XRPUSDT",
+        "XLMBTC":   "orderbook.1.XLMBTC",
+        "XLMUSDT":  "orderbook.1.XLMUSDT",
+        "ALGOBTC":  "orderbook.1.ALGOBTC",
+        "ALGOUSDT": "orderbook.1.ALGOUSDT",
+        "MANABTC": "orderbook.1.MANABTC",
+        "MANAUSDT": "orderbook.1.MANAUSDT",
+        "MATICBTC": "orderbook.1.MATICBTC",
+        "MATICUSDT": "orderbook.1.MATICUSDT",
+        "LTCBTC": "orderbook.1.LTCBTC",
+        "LTCUSDT": "orderbook.1.LTCUSDT",
+        "DOTBTC": "orderbook.1.DOTBTC",
+        "DOTUSDT": "orderbook.1.DOTUSDT",
+        "SANDBTC": "orderbook.1.SANDBTC",
+        "SANDUSDT": "orderbook.1.SANDUSDT",
+        "MNTBTC": "orderbook.1.MNTBTC",
+        "MNTUSDT": "orderbook.1.MNTUSDT"
+    },
+    "list": [
+        {
+            "symbols": ["BTCUSDT", "MANABTC", "MANAUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "MANABTC", "MANAUSDT"] },
+                { "base_quote": true, "symbols": ["MANAUSDT", "MANABTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "MATICBTC", "MATICUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "MATICBTC", "MATICUSDT"] },
+                { "base_quote": true, "symbols": ["MATICUSDT", "MATICBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "LTCBTC", "LTCUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "LTCBTC", "LTCUSDT"] },
+                { "base_quote": true, "symbols": ["LTCUSDT", "LTCBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "DOTBTC", "DOTUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "DOTBTC", "DOTUSDT"] },
+                { "base_quote": true, "symbols": ["DOTUSDT", "DOTBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "SANDBTC", "SANDUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "SANDBTC", "SANDUSDT"] },
+                { "base_quote": true, "symbols": ["SANDUSDT", "SANDBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "MNTBTC", "MNTUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "MNTBTC", "MNTUSDT"] },
+                { "base_quote": true, "symbols": ["MNTUSDT", "MNTBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["ALGOUSDT", "ALGOBTC", "BTCUSDT"],
+            "combinations": [
+                { "base_quote": true, "symbols": ["ALGOUSDT", "ALGOBTC", "BTCUSDT"] },
+                { "base_quote": false, "symbols": ["BTCUSDT", "ALGOBTC", "ALGOUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["XLMUSDT", "XLMBTC", "BTCUSDT"],
+            "combinations": [
+                { "base_quote": true, "symbols": ["XLMUSDT", "XLMBTC", "BTCUSDT"] },
+                { "base_quote": false, "symbols": ["BTCUSDT", "XLMBTC", "XLMUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "XRPBTC", "XRPUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "XRPBTC", "XRPUSDT"] },
+                { "base_quote": true, "symbols": ["XRPUSDT", "XRPBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "ETHBTC", "ETHUSDT"] },
+                { "base_quote": true, "symbols": ["ETHUSDT", "ETHBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["BTCUSDT", "WBTCBTC", "WBTCUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "WBTCBTC", "WBTCUSDT"] },
+                { "base_quote": true, "symbols": ["WBTCUSDT", "WBTCBTC", "BTCUSDT"] }
+            ]
+        },
+        {
+            "symbols": ["SOLUSDT", "SOLBTC", "BTCUSDT"],
+            "combinations": [
+                { "base_quote": false, "symbols": ["BTCUSDT", "SOLBTC", "SOLUSDT"] },
+                { "base_quote": true, "symbols": ["SOLUSDT", "SOLBTC", "BTCUSDT"] }
+            ]
+        }
+    ]
+}

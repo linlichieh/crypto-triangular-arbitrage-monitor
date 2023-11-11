@@ -4,8 +4,12 @@ deploy:
 	env GOOS=linux GOARCH=amd64 go build
 	rsync -av -e ssh crypto-triangular-arbitrage-watch tri:/home/ec2-user/app/
 	rsync -av -e ssh prod-config.yml tri:/home/ec2-user/app/config.yml
-	rsync -av -e ssh symbol_combinations.json tri:/home/ec2-user/app/
+	rsync -av -e ssh prod-symbol_combinations.json tri:/home/ec2-user/app/symbol_combinations.json
 	ssh -t tri "sudo systemctl restart crypto-triangular-arbitrage-watch"
 run:
 	go build
 	./crypto-triangular-arbitrage-watch
+buy:
+	go run manual_tests/place_order.go --action="Buy" --qty=$(QTY)
+sell:
+	go run manual_tests/place_order.go --action="Sell" --qty=$(QTY)
