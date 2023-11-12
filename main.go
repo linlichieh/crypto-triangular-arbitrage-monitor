@@ -12,8 +12,10 @@ func main() {
 	loadEnvConfig()
 
 	messenger := initMessenger()
-	messenger.sendToChannel(messenger.Channel.SystemLogs, "Config has been loaded successfully.")
-	messenger.sendToChannel(messenger.Channel.SystemLogs, fmt.Sprintf("ENV: %s", viper.GetString("ENV")))
+	// Listen incoming messages and store these messages into buffer, so that it won't reach the rate limits of slack
+	go messenger.handleChannelSystemLogs()
+	messenger.SystemLogs("Config has been loaded successfully.")
+	messenger.SystemLogs(fmt.Sprintf("ENV: %s", viper.GetString("ENV")))
 	log.Println("DEBUG_PRINT_MESSAGE:", viper.GetBool("DEBUG_PRINT_MESSAGE"))
 	log.Println("DEBUG_PRINT_MOST_PROFIT:", viper.GetBool("DEBUG_PRINT_MOST_PROFIT"))
 

@@ -127,7 +127,7 @@ func (tri *Tri) printAllSymbols() {
 	for symbol := range tri.SymbolOrdersMap {
 		symbols = append(symbols, symbol)
 	}
-	tri.Messenger.sendToChannel(tri.Messenger.Channel.SystemLogs, fmt.Sprintf("Symbols: %v", symbols))
+	tri.Messenger.SystemLogs(fmt.Sprintf("Symbols: %v", symbols))
 }
 
 func (tri *Tri) printAllCombinations() {

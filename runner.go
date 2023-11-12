@@ -10,17 +10,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Rate limit for triangular arbitrage happens
-const TRI_ARB_FOUND_INTERVAL_MILLISECOND = 300
+const (
+	// Rate limit for triangular arbitrage happens
+	TRI_ARB_FOUND_INTERVAL_MILLISECOND = 300
 
-// Slack
-const SEND_TO_WATCH_INTERVAL_SECOND = 2
-const SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND = 30
+	// Slack
+	SLACK_CHANNEL_WATCH_TRI_INTERVAL_SECOND                   = 3
+	SLACK_CHANNEL_SYSTEM_LOGS_BALANCE_COUNTER_INTERVAL_SECOND = 30
 
-const CAPITAL = 1000
+	// TODO DEBUG
+	CAPITAL = 1000
 
-// Only place the order when it is over the target profit threshold
-const TARGET_PROFIT_FOR_TRADE = 0.001
+	// Only place the order when it is over the target profit threshold
+	// TODO Put it into the config?
+	TARGET_PROFIT_FOR_TRADE = 0.001
+)
 
 type Price []string
 
@@ -48,6 +52,8 @@ type MostProfit struct {
 	RemainingBalance decimal.Decimal
 	// Store the most profitable combination
 	Combination *Combination
+	// Time
+	Ts time.Time
 }
 
 func initOrderbookRunner(tri *Tri) *OrderbookRunner {
@@ -83,8 +89,8 @@ func (or *OrderbookRunner) ListenAll() {
 	}
 
 	// Send messages to slack
-	go or.handleChannelWatch()
-	go or.handleChannelSystemLogs()
+	go or.handleWatchMsgs()
+	go or.handleSystemLogsMsgs()
 }
 
 func (or *OrderbookRunner) listenOrderbook(symbol string) {
@@ -157,6 +163,7 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 		if balance.GreaterThan(mostProfit.RemainingBalance) {
 			mostProfit.RemainingBalance = balance
 			mostProfit.Combination = combination
+			mostProfit.Ts = time.Now()
 		}
 	}
 
@@ -174,8 +181,8 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 }
 
 // Send to slack every second in case hit the ceiling of rate limits
-func (or *OrderbookRunner) handleChannelWatch() {
-	ticker := time.NewTicker(time.Duration(SEND_TO_WATCH_INTERVAL_SECOND) * time.Second)
+func (or *OrderbookRunner) handleWatchMsgs() {
+	ticker := time.NewTicker(time.Duration(SLACK_CHANNEL_WATCH_TRI_INTERVAL_SECOND) * time.Second)
 	defer ticker.Stop()
 
 	var combinedMsg string
@@ -192,19 +199,19 @@ func (or *OrderbookRunner) handleChannelWatch() {
 			}
 
 			for _, mostProfit := range mostProfitMap {
-				combinedMsg += fmt.Sprintf("%s\n", mostProfit.tradeMsg())
+				combinedMsg += fmt.Sprintf("%s %s\n", mostProfit.Ts.UTC().Add(8*time.Hour).Format("15:04:05"), mostProfit.tradeMsg())
 			}
-			go or.Messenger.sendToChannel(or.Messenger.Channel.Watch, combinedMsg)
+			go or.Messenger.sendToChannel(or.Messenger.ChannelMap[SLACK_CHANNEL_WATCH].Name, combinedMsg)
 
-			// flush the combined message
+			// Reset the combined message
 			combinedMsg = ""
 			mostProfitMap = make(map[*Combination]*MostProfit)
 		}
 	}
 }
 
-func (or *OrderbookRunner) handleChannelSystemLogs() {
-	ticker := time.NewTicker(time.Duration(SEND_TO_SYSTEM_LOGS_INTERVAL_SECOND) * time.Second)
+func (or *OrderbookRunner) handleSystemLogsMsgs() {
+	ticker := time.NewTicker(time.Duration(SLACK_CHANNEL_SYSTEM_LOGS_BALANCE_COUNTER_INTERVAL_SECOND) * time.Second)
 	defer ticker.Stop()
 
 	// To show counters for result e.g. `map[997:1762 998:466]` means result 997 gets 1762 times, 998 gets 466 times
@@ -218,9 +225,9 @@ func (or *OrderbookRunner) handleChannelSystemLogs() {
 			if len(counters) == 0 {
 				continue
 			}
-			go or.Messenger.sendToChannel(or.Messenger.Channel.SystemLogs, fmt.Sprintf("%s %+v", time.Now().UTC().Add(8*time.Hour).Format("15:04:05"), counters))
+			or.Messenger.SystemLogs(fmt.Sprintf("%s %+v", time.Now().UTC().Add(8*time.Hour).Format("15:04:05"), counters))
 
-			// flush the combined message
+			// Reset the counters
 			counters = make(map[string]int64)
 		}
 	}
@@ -228,8 +235,7 @@ func (or *OrderbookRunner) handleChannelSystemLogs() {
 
 func (p *MostProfit) tradeMsg() string {
 	return fmt.Sprintf(
-		"%s %s->%s  [%s]  %s -> %s -> %s",
-		time.Now().UTC().Add(8*time.Hour).Format("15:04:05"),
+		"%s->%s  [%s]  %s -> %s -> %s",
 		decimal.NewFromInt(CAPITAL).String(),
 		p.RemainingBalance.StringFixed(1),
 		p.Symbol,

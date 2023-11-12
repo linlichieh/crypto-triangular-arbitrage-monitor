@@ -10,6 +10,6 @@ run:
 	go build
 	./crypto-triangular-arbitrage-watch
 buy:
-	go run manual_tests/place_order.go --action="Buy" --qty=$(QTY)
+	go run manual_tests/order.go --action="Buy" --qty=$(qty)
 sell:
-	go run manual_tests/place_order.go --action="Sell" --qty=$(QTY)
+	go run manual_tests/order.go --action="Sell" --qty=$(qty)

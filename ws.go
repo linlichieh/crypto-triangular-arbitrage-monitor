@@ -64,9 +64,9 @@ func (ws *WsClient) setMessenger(messenger *Messenger) {
 func (ws *WsClient) HandleOrderConnection() {
 	for {
 		if err := ws.listenOrderStatus(); err != nil {
-			ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, fmt.Sprintf("Order status onnection, error: %v", err))
+			ws.Messenger.SystemLogs(fmt.Sprintf("Order status connection, error: %v", err))
 		}
-		ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, "Order status connection reconnecting...")
+		ws.Messenger.SystemLogs("Order status connection reconnecting...")
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -184,7 +184,7 @@ func (ws *WsClient) listenOrderStatus() error {
 			return nil
 		},
 	)
-	err := conn.Connect([]string{"order.spot"})
+	err := conn.Connect([]string{"order.spot", "execution.spot", "wallet"})
 	if err != nil {
 		return fmt.Errorf("failed to subscribe 'order.spot', err: %v", err)
 	}
@@ -226,9 +226,9 @@ func (ws *WsClient) HandleOrderbookConnections() {
 func (ws *WsClient) listenOrderbooksWithRetry(connNum int, topics []string) {
 	for {
 		if err := ws.listenOrderbooks(connNum, topics); err != nil {
-			ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, fmt.Sprintf("Orderbooks connection(%d) error: %v", connNum, err))
+			ws.Messenger.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) error: %v", connNum, err))
 		}
-		ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, fmt.Sprintf("Orderbooks connection(%d) reconnecting...", connNum))
+		ws.Messenger.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) reconnecting...", connNum))
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -246,7 +246,7 @@ func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 	}
 
 	// Handle incoming messages
-	ws.Messenger.sendToChannel(ws.Messenger.Channel.SystemLogs, fmt.Sprintf("Connection(%d) listening...", connNum))
+	ws.Messenger.SystemLogs(fmt.Sprintf("Connection(%d) listening...", connNum))
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 	for {

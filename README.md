@@ -62,11 +62,11 @@ Run (optional, it's just for receiving order status)
 
 Buy BTC with $10 USDT
 
-    make buy QTY=10
+    make buy qty=10
 
 Sell BTC with qty=0.000294
 
-    make sell QTY=0.000294
+    make sell qty=0.000294
 
 # TODO
 

@@ -18,6 +18,10 @@ const (
 	ORDER_TYPE_MARKET = "Market"
 )
 
+type Client struct {
+	bybitClient *bybit.Client
+}
+
 func main() {
 	loadEnvConfig()
 	// Define a string flag with a default value and a short description.
@@ -27,11 +31,15 @@ func main() {
 	// Parse the flags.
 	flag.Parse()
 
+	client := Client{
+		bybitClient: bybit.NewBybitHttpClient(viper.GetString("BYBIT_API_KEY"), viper.GetString("BYBIT_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET)),
+	}
+
 	switch *action {
 	case SIDE_BUY:
-		buy(*qty)
+		client.buy(*qty)
 	case SIDE_SELL:
-		sell(*qty)
+		client.sell(*qty)
 	default:
 		log.Fatalf("action '%s' not supported", *action)
 	}
@@ -50,8 +58,7 @@ func loadEnvConfig() {
 	}
 }
 
-func buy(qty string) {
-	client := bybit.NewBybitHttpClient(viper.GetString("BYBIT_API_KEY"), viper.GetString("BYBIT_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
+func (c *Client) buy(qty string) {
 	params := map[string]interface{}{
 		"category":  CATEGORY_SPOT,
 		"symbol":    "BTCUSDT",
@@ -59,7 +66,7 @@ func buy(qty string) {
 		"side":      SIDE_BUY,
 		"qty":       qty,
 	}
-	orderResult, err := client.NewTradeService(params).PlaceOrder(context.Background())
+	orderResult, err := c.bybitClient.NewTradeService(params).PlaceOrder(context.Background())
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -72,8 +79,7 @@ func buy(qty string) {
 	}
 }
 
-func sell(qty string) {
-	client := bybit.NewBybitHttpClient(viper.GetString("BYBIT_API_KEY"), viper.GetString("BYBIT_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET))
+func (c *Client) sell(qty string) {
 	params := map[string]interface{}{
 		"category":  CATEGORY_SPOT,
 		"symbol":    "BTCUSDT",
@@ -81,7 +87,7 @@ func sell(qty string) {
 		"side":      SIDE_SELL,
 		"qty":       qty,
 	}
-	orderResult, err := client.NewTradeService(params).PlaceOrder(context.Background())
+	orderResult, err := c.bybitClient.NewTradeService(params).PlaceOrder(context.Background())
 	if err != nil {
 		fmt.Println(err)
 		return
