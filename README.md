@@ -105,11 +105,16 @@ execution.spot
 order.spot
 
     {"topic":"order.spot","id":"100401071-20000-1253141306","creationTime":1699764599843,"data":[{"category":"spot","symbol":"BTCUSDT","orderId":"1552132392821724672","orderLinkId":"1552132392821724673","blockTradeId":"","side":"Buy","positionIdx":0,"orderStatus":"PartiallyFilledCanceled","cancelType":"UNKNOWN","rejectReason":"EC_CancelForNoFullFill","timeInForce":"IOC","isLeverage":"0","price":"0","qty":"10.000000","avgPrice":"32635","leavesQty":"0.000000","leavesValue":"0.01369000","cumExecQty":"0.000306","cumExecValue":"9.98631000","cumExecFee":"0.000000306","orderType":"Market","stopOrderType":"","orderIv":"","triggerPrice":"0.00","takeProfit":"0.00","stopLoss":"0.00","triggerBy":"","tpTriggerBy":"","slTriggerBy":"","triggerDirection":0,"placeType":"","lastPriceOnCreated":"32634.91","closeOnTrigger":false,"reduceOnly":false,"smpGroup":0,"smpType":"None","smpOrderId":"","createdTime":"1699764599837","updatedTime":"1699764599841","feeCurrency":"BTC"}]}
+    {"topic":"order.spot","id":"100401071-20000-1253189597","creationTime":1699777868989,"data":[{"category":"spot","symbol":"BTCUSDT","orderId":"1552243702477624832","orderLinkId":"1552243702477624833","blockTradeId":"","side":"Sell","positionIdx":0,"orderStatus":"Filled","cancelType":"UNKNOWN","rejectReason":"EC_NoError","timeInForce":"IOC","isLeverage":"0","price":"0","qty":"0.001936","avgPrice":"32178.11355371","leavesQty":"0.000000","leavesValue":"0.00000000","cumExecQty":"0.001936","cumExecValue":"62.29682784","cumExecFee":"0.06229682784","orderType":"Market","stopOrderType":"","orderIv":"","triggerPrice":"0.00","takeProfit":"0.00","stopLoss":"0.00","triggerBy":"","tpTriggerBy":"","slTriggerBy":"","triggerDirection":0,"placeType":"","lastPriceOnCreated":"32224.00","closeOnTrigger":false,"reduceOnly":false,"smpGroup":0,"smpType":"None","smpOrderId":"","createdTime":"1699777868982","updatedTime":"1699777868986","feeCurrency":"USDT"}]}
 
 wallet
 
     {"id":"100401071d62a16b0-cc3a-41d7-b473-086b6cde0036","topic":"wallet","creationTime":1699764599844,"data":[{"accountIMRate":"0","accountMMRate":"0","totalEquity":"100.27419876","totalWalletBalance":"99.70879947","totalMarginBalance":"99.70879947","totalAvailableBalance":"99.70879947","totalPerpUPL":"0","totalInitialMargin":"0","totalMaintenanceMargin":"0","coin":[{"coin":"USDC","equity":"0","usdValue":"0","walletBalance":"0","availableToWithdraw":"0","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"0","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"},{"coin":"BTC","equity":"0.0003058","usdValue":"11.30798592","walletBalance":"0.0003058","availableToWithdraw":"0.0003058","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"-0.00000619","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"},{"coin":"USDT","equity":"88.94040055","usdValue":"88.96621283","walletBalance":"88.94040055","availableToWithdraw":"88.94040055","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"-0.17895808","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"}],"accountLTV":"0","accountType":"UNIFIED"}]}
 
+# Manual testing issue in testnet
+
+* testnet doesn't seem to support all orderbooks.
+* If no one trades BTCUSDT, ETHUSDT or BTCETH, combination calculation won't be conducted. Then there is no output for 'watch'.
 
 # TODO
 
@@ -119,3 +124,5 @@ wallet
 * mysql to store the process of trade
 * Add unit test
 * ISSUE: sell response `"cumExecQty":"0.000298"` but it's `0.00029772` on bybit dashboard
+    * minus basePrecision or quotePrecision
+    * https://bybit-exchange.github.io/docs/v5/market/instrument#response-parameters

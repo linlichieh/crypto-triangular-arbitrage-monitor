@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,17 +14,42 @@ import (
 	"github.com/spf13/viper"
 )
 
+type OrderSpotData struct {
+	Symbol   string `json:"symbol"`
+	Side     string `json:"side"`
+	CumQty   string `json:"cumExecQty"`
+	CumValue string `json:"cumExecValue"`
+	CumFee   string `json:"cumExecFee"`
+	Status   string `json:"orderStatus"`
+	Type     string `json:"orderType"`
+}
+
+// TODO not implemented yet
+type ExecutionSpotData struct{}
+
+// TODO not implemented yet
+type WalletDataData struct {
+	Coins []Coin `json:"coin"`
+}
+
+type Coin struct {
+	Coin    string `json:"coin"`
+	Balance string `json:"walletBalance"`
+}
+
 func (ws *WsClient) HandlePrivateChannel() {
+	topics := []string{"order.spot", "execution.spot", "wallet"} // "order.spot", "execution.spot", "wallet"
+
 	for {
-		if err := ws.listenOrderStatus([]string{"order.spot", "execution.spot", "wallet"}); err != nil {
-			ws.Messenger.SystemLogs(fmt.Sprintf("Order status connection, error: %v", err))
+		if err := ws.listenPrivateChannel(topics); err != nil {
+			ws.Messenger.SystemLogs(fmt.Sprintf("Private channel connection, error: %v", err))
 		}
-		ws.Messenger.SystemLogs("Order status connection reconnecting...")
+		ws.Messenger.SystemLogs("Private channel connection reconnecting...")
 		time.Sleep(3 * time.Second)
 	}
 }
 
-func (ws *WsClient) listenOrderStatus(topics []string) error {
+func (ws *WsClient) listenPrivateChannel(topics []string) error {
 	header := make(http.Header)
 	header.Set("api_key", viper.GetString("BYBIT_API_KEY"))
 	header.Set("api_secret", viper.GetString("BYBIT_API_SECRET"))
@@ -53,15 +77,12 @@ func (ws *WsClient) listenOrderStatus(topics []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read auth message, err: %v", err)
 	}
-	var opResp OpResp
-	err = json.Unmarshal(message, &opResp)
+	proceed, err := ws.handleOpResp(message)
 	if err != nil {
-		return fmt.Errorf("failed to parse auth response, err: %v", err)
+		return err
 	}
-	if opResp.Op == "auth" {
-		if !opResp.Success {
-			return fmt.Errorf("failed to auth, err: %v", err)
-		}
+	if !proceed {
+		return nil
 	}
 	ws.Messenger.SystemLogs("auth succeed!")
 
@@ -98,7 +119,7 @@ func (ws *WsClient) listenOrderStatus(topics []string) error {
 			if ws.DebugPrintMessage {
 				log.Println("private:", string(message))
 			}
-			err = ws.handlePrivateResponse(message)
+			err = ws.handleResponse(message)
 			if err != nil {
 				return fmt.Errorf("failed to parse private message during running, err: %v", err)
 			}
@@ -106,19 +127,6 @@ func (ws *WsClient) listenOrderStatus(topics []string) error {
 			return err
 		}
 	}
-}
-
-func (ws *WsClient) handlePrivateResponse(message []byte) error {
-	proceed, err := ws.handleOpResp(message)
-	if err != nil {
-		return err
-	}
-	if !proceed {
-		return nil
-	}
-
-	// TODO
-	return nil
 }
 
 func (ws *WsClient) generateSignature(expires string) string {

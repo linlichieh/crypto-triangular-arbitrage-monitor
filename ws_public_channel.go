@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -10,13 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
-
-type OrderbookResp struct {
-	Topic string        `json:"topic"`
-	Ts    int64         `json:"ts"`   // ms
-	Type  string        `json:"type"` // Data type e.g. snapshot, delta
-	Data  OrderbookData `json:"data"`
-}
 
 type OrderbookData struct {
 	Symbol   string  `json:"s"`
@@ -96,7 +88,7 @@ func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 			if ws.DebugPrintMessage {
 				log.Println("orderbook:", string(message))
 			}
-			err = ws.handleOrderbookResponse(message)
+			err = ws.handleResponse(message)
 			if err != nil {
 				return fmt.Errorf("failed to parse orderbook message during running, err: %v", err)
 			}
@@ -104,29 +96,6 @@ func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 			return err
 		}
 	}
-}
-
-func (ws *WsClient) handleOrderbookResponse(message []byte) error {
-	proceed, err := ws.handleOpResp(message)
-	if err != nil {
-		return err
-	}
-	if !proceed {
-		return nil
-	}
-
-	// Otherwise, it's orderbook data
-	var orderbookResp OrderbookResp
-	err = json.Unmarshal(message, &orderbookResp)
-	if err != nil {
-		return fmt.Errorf("failed to parse orderbook message after connecting, err: %v", err)
-	}
-
-	// To prevent panic, it shouldn't happen, but just in case if Bybit returns unexpected data back
-	if orderbookResp.Data.Symbol != "" {
-		ws.OrderbookRunner.OrderbookListeners[orderbookResp.Data.Symbol].orderbookDataCh <- &orderbookResp.Data
-	}
-	return nil
 }
 
 func (ws *WsClient) getOrderbookTopics() []string {
