@@ -31,8 +31,8 @@ func main() {
 	// Have to be after initTri as it will set klines
 	wsClient := initWsClient(tri, orderbookRunner)
 	wsClient.setMessenger(messenger)
-	go wsClient.HandleOrderConnection()   // block
-	wsClient.HandleOrderbookConnections() // block
+	go wsClient.HandlePrivateChannel() // block
+	wsClient.HandlePublicChannel()     // block
 }
 
 func loadEnvConfig() {

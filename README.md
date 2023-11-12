@@ -68,6 +68,49 @@ Sell BTC with qty=0.000294
 
     make sell qty=0.000294
 
+# Bybit API response
+
+### public channel
+
+subscribe orderbook
+
+    {"success":true,"ret_msg":"subscribe","conn_id":"d8189029-b0b8-415e-89dd-dbaa99bebecd","op":"subscribe"}
+
+ping on orderbook connection
+
+    {"success":true,"ret_msg":"pong","conn_id":"8c207ac5-8a20-40d8-963e-03e6b9cfe080","op":"ping"}
+
+orderbook
+
+    {"topic":"orderbook.1.BTCUSDT","ts":1699764797519,"type":"delta","data":{"s":"BTCUSDT","b":[],"a":[["32499.27","0.011534"],["32529.54","0"]],"u":873489,"seq":1253141792}}
+
+### private channel
+
+auth
+
+    {"success":true,"ret_msg":"","op":"auth","conn_id":"cl48jvldaugj6f98t3o0-97id"}
+
+subscribe order status
+
+    {"success":true,"ret_msg":"","op":"subscribe","conn_id":"cl48jjpqo29jk1nbp4e0-97x2"}
+
+ping on order status connection
+
+    {"op":"pong","args":["1699766561376"],"conn_id":"cl48jjpqo29jk1nbp4e0-98gm"}
+
+execution.spot
+
+    {"topic":"execution.spot","id":"100401071-20000-1253141306","creationTime":1699764599843,"data":[{"category":"spot","symbol":"BTCUSDT","closedSize":"","execFee":"0.000000306","execId":"2100000000047469164","execPrice":"32635.00","execQty":"0.000306","execType":"Trade","execValue":"9.98631000","feeRate":"0.001","tradeIv":"","markIv":"","blockTradeId":"","markPrice":"","indexPrice":"","underlyingPrice":"","leavesQty":"0.000000","orderId":"1552132392821724672","orderLinkId":"1552132392821724673","orderPrice":"0","orderQty":"0.000000","orderType":"Market","stopOrderType":"","side":"Buy","execTime":"1699764599837","isLeverage":"0","isMaker":false,"seq":1253141306}]}
+
+order.spot
+
+    {"topic":"order.spot","id":"100401071-20000-1253141306","creationTime":1699764599843,"data":[{"category":"spot","symbol":"BTCUSDT","orderId":"1552132392821724672","orderLinkId":"1552132392821724673","blockTradeId":"","side":"Buy","positionIdx":0,"orderStatus":"PartiallyFilledCanceled","cancelType":"UNKNOWN","rejectReason":"EC_CancelForNoFullFill","timeInForce":"IOC","isLeverage":"0","price":"0","qty":"10.000000","avgPrice":"32635","leavesQty":"0.000000","leavesValue":"0.01369000","cumExecQty":"0.000306","cumExecValue":"9.98631000","cumExecFee":"0.000000306","orderType":"Market","stopOrderType":"","orderIv":"","triggerPrice":"0.00","takeProfit":"0.00","stopLoss":"0.00","triggerBy":"","tpTriggerBy":"","slTriggerBy":"","triggerDirection":0,"placeType":"","lastPriceOnCreated":"32634.91","closeOnTrigger":false,"reduceOnly":false,"smpGroup":0,"smpType":"None","smpOrderId":"","createdTime":"1699764599837","updatedTime":"1699764599841","feeCurrency":"BTC"}]}
+
+wallet
+
+    {"id":"100401071d62a16b0-cc3a-41d7-b473-086b6cde0036","topic":"wallet","creationTime":1699764599844,"data":[{"accountIMRate":"0","accountMMRate":"0","totalEquity":"100.27419876","totalWalletBalance":"99.70879947","totalMarginBalance":"99.70879947","totalAvailableBalance":"99.70879947","totalPerpUPL":"0","totalInitialMargin":"0","totalMaintenanceMargin":"0","coin":[{"coin":"USDC","equity":"0","usdValue":"0","walletBalance":"0","availableToWithdraw":"0","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"0","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"},{"coin":"BTC","equity":"0.0003058","usdValue":"11.30798592","walletBalance":"0.0003058","availableToWithdraw":"0.0003058","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"-0.00000619","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"},{"coin":"USDT","equity":"88.94040055","usdValue":"88.96621283","walletBalance":"88.94040055","availableToWithdraw":"88.94040055","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"-0.17895808","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"}],"accountLTV":"0","accountType":"UNIFIED"}]}
+
+
 # TODO
 
 * profit > 0.001
