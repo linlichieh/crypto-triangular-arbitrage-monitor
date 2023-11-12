@@ -31,7 +31,7 @@ type Price []string
 type OrderbookRunner struct {
 	Tri                  *Tri
 	Fee                  decimal.Decimal // 0.01 = 1%
-	NetPercent           decimal.Decimal
+	NetPercent           decimal.Decimal // to get amount without fee  e.g. 1 - 0.1% fee = 0.999
 	OrderbookListeners   map[string]*OrderbookListener
 	Messenger            *Messenger
 	ChannelWatch         chan *MostProfit
@@ -150,11 +150,11 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 		// Calculate the profit
 		var balance, secondTrade decimal.Decimal
 		capital := decimal.NewFromInt(CAPITAL)
-		firstTrade := capital.Div(combination.SymbolOrders[0].Bid.Price).Mul(or.NetPercent)
+		firstTrade := capital.Div(combination.SymbolOrders[0].Ask.Price).Mul(or.NetPercent)
 		if combination.BaseQuote {
 			secondTrade = firstTrade.Mul(combination.SymbolOrders[1].Bid.Price).Mul(or.NetPercent)
 		} else {
-			secondTrade = firstTrade.Div(combination.SymbolOrders[1].Bid.Price).Mul(or.NetPercent)
+			secondTrade = firstTrade.Div(combination.SymbolOrders[1].Ask.Price).Mul(or.NetPercent)
 		}
 		thirdTrade := secondTrade.Mul(combination.SymbolOrders[2].Bid.Price).Mul(or.NetPercent)
 		balance = thirdTrade.Truncate(4)
@@ -166,6 +166,14 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 			mostProfit.Ts = time.Now()
 		}
 	}
+
+	// TODO Calculate how much money to put in
+	// fmt.Println()
+	// fmt.Println("baseQuote: ", mostProfit.Combination.BaseQuote)
+	// fmt.Printf("0  %s  bid price: %s, bid size: %s, ask price: %s, ask size: %s\n", mostProfit.Combination.SymbolOrders[0].Symbol, mostProfit.Combination.SymbolOrders[0].Bid.Price, mostProfit.Combination.SymbolOrders[0].Bid.Size, mostProfit.Combination.SymbolOrders[0].Ask.Price, mostProfit.Combination.SymbolOrders[0].Ask.Size)
+	// fmt.Printf("1  %s  bid price: %s, bid size: %s, ask price: %s, ask size: %s\n", mostProfit.Combination.SymbolOrders[1].Symbol, mostProfit.Combination.SymbolOrders[1].Bid.Price, mostProfit.Combination.SymbolOrders[1].Bid.Size, mostProfit.Combination.SymbolOrders[1].Ask.Price, mostProfit.Combination.SymbolOrders[1].Ask.Size)
+	// fmt.Printf("2  %s  bid price: %s, bid size: %s, ask price: %s, ask size: %s\n", mostProfit.Combination.SymbolOrders[2].Symbol, mostProfit.Combination.SymbolOrders[2].Bid.Price, mostProfit.Combination.SymbolOrders[2].Bid.Size, mostProfit.Combination.SymbolOrders[2].Ask.Price, mostProfit.Combination.SymbolOrders[2].Ask.Size)
+	// fmt.Println()
 
 	capital := decimal.NewFromInt(CAPITAL)
 	profitPercent := mostProfit.RemainingBalance.Sub(capital).Div(capital)

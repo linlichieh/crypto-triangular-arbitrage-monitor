@@ -31,8 +31,8 @@ type Combination struct {
 // orderbook
 type SymbolOrder struct {
 	Symbol string
-	Bid    *Order // latest bid
-	Ask    *Order // latest ask
+	Ask    *Order // The ask price, also known as the offer price, is the lowest price at which a seller (or sellers) is willing to sell
+	Bid    *Order // The bid price is the highest price that a buyer (or buyers) is willing to pay
 	Seq    int64
 }
 

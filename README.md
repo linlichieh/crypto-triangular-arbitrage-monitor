@@ -116,6 +116,53 @@ wallet
 * testnet doesn't seem to support all orderbooks.
 * If no one trades BTCUSDT, ETHUSDT or BTCETH, combination calculation won't be conducted. Then there is no output for 'watch'.
 
+# Calculation
+
+### USDT->BTC->ETH->USDT
+
+BTCUSDT (base: BTC, quote: USDT)
+
+    BTC = USDT / ask.price
+
+ETHBTC (base: ETH, quote: BTC)
+
+    ETH = BTC / ask.price
+
+ETHUSDT (base: ETH, quote: USDT)
+
+    USDT = ETH * bid.price
+
+e.g.
+
+    baseQuote:  false
+    0  BTCUSDT  bid price: 37074, bid size: 0.748953, ask price: 37074.01, ask size: 3.636181
+    1  ETHBTC  bid price: 0.055199, bid size: 0.5, ask price: 0.0552, ask size: 0.04
+    2  ETHUSDT  bid price: 2046.98, bid size: 0.44718, ask price: 2046.99, ask size: 52.50055
+
+
+### USDT->ETH->BTC->USDT
+
+
+ETHUSDT (base: ETH, quote: USDT)
+
+    ETH = USDT / ask.price
+
+ETHBTC (base: ETH, quote: BTC)
+
+    BTC = ETH * bid.price
+
+BTCUSDT (base: BTC, quote: USDT)
+
+    USDT = BTC * bid.price
+
+e.g.
+
+    baseQuote:  true
+    0  ETHUSDT  bid price: 2044.92, bid size: 0.21027, ask price: 2044.93, ask size: 34.85644
+    1  ETHBTC  bid price: 0.055166, bid size: 0.388, ask price: 0.055182, ask size: 0.342
+    2  BTCUSDT  bid price: 37069.38, bid size: 0.050048, ask price: 37069.39, ask size: 6.355316
+
+
 # TODO
 
 * profit > 0.001
