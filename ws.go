@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"regexp"
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
@@ -12,6 +14,7 @@ type WsClient struct {
 	Tri               *Tri
 	OrderbookRunner   *OrderbookRunner
 	Messenger         *Messenger
+	OrderbookTopicReg *regexp.Regexp
 	DebugPrintMessage bool
 	ListeningTopics   []string
 }
@@ -32,10 +35,16 @@ type TopicResp struct {
 }
 
 func initWsClient(tri *Tri, orderbookRunner *OrderbookRunner) *WsClient {
+	reg, err := regexp.Compile(`^orderbook\..+`)
+	if err != nil {
+		log.Println("Error compiling regex:", err)
+	}
+
 	return &WsClient{
 		Tri:               tri,
 		OrderbookRunner:   orderbookRunner,
 		DebugPrintMessage: viper.GetBool("DEBUG_PRINT_MESSAGE"),
+		OrderbookTopicReg: reg,
 	}
 }
 
@@ -93,8 +102,8 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 
 	// To prevent panic, it shouldn't happen, but just in case if Bybit returns unexpected data back
 	if topicResp.Topic != "" {
-		switch topicResp.Topic {
-		case "orderbook.1.BTCUSDT":
+		switch {
+		case ws.OrderbookTopicReg.MatchString(topicResp.Topic):
 			var data OrderbookData
 			err := json.Unmarshal(topicResp.Data, &data)
 			if err != nil {
@@ -104,7 +113,7 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 			if data.Symbol != "" {
 				ws.OrderbookRunner.OrderbookListeners[data.Symbol].orderbookDataCh <- &data
 			}
-		case "order.spot":
+		case topicResp.Topic == "order.spot":
 			var list []OrderSpotData
 			err := json.Unmarshal(topicResp.Data, &list)
 			if err != nil {
@@ -139,7 +148,7 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 					}
 				}
 			}
-		case "wallet":
+		case topicResp.Topic == "wallet":
 			var list []WalletDataData
 			err := json.Unmarshal(topicResp.Data, &list)
 			if err != nil {
