@@ -1,6 +1,9 @@
-package main
+package runner
 
 import (
+	"crypto-triangular-arbitrage-watch/notification"
+	"crypto-triangular-arbitrage-watch/order"
+	"crypto-triangular-arbitrage-watch/tri"
 	"fmt"
 	"log"
 	"strconv"
@@ -28,12 +31,20 @@ const (
 
 type Price []string
 
+type OrderbookData struct {
+	Symbol   string      `json:"s"`
+	Bids     []tri.Price `json:"b"`
+	Asks     []tri.Price `json:"a"`
+	UpdateId int64       `json:"u"`   // Update ID. It's a sequence. Occasionally, you'll receive "u"=1, which is a snapshot data due to the restart of the service. So please overwrite your local orderbook
+	Seq      int64       `json:"seq"` // You can use this field to compare different levels orderbook data, and for the smaller seq, then it means the data is generated earlier.
+}
+
 type OrderbookRunner struct {
-	Tri                  *Tri
+	Tri                  *tri.Tri
 	Fee                  decimal.Decimal // 0.01 = 1%
 	NetPercent           decimal.Decimal // to get amount without fee  e.g. 1 - 0.1% fee = 0.999
 	OrderbookListeners   map[string]*OrderbookListener
-	Messenger            *Messenger
+	Slack                *notification.Slack
 	ChannelWatch         chan *MostProfit
 	ChannelSystemLogs    chan *MostProfit
 	DebugPrintMostProfit bool
@@ -42,7 +53,7 @@ type OrderbookRunner struct {
 type OrderbookListener struct {
 	lastTimeOfTriArbFound time.Time
 	ignoreIncomingOrder   bool
-	orderbookDataCh       chan *OrderbookData
+	OrderbookDataCh       chan *OrderbookData
 }
 
 type MostProfit struct {
@@ -51,12 +62,12 @@ type MostProfit struct {
 	// Store the balance for the most profitable combination
 	RemainingBalance decimal.Decimal
 	// Store the most profitable combination
-	Combination *Combination
+	Combination *tri.Combination
 	// Time
 	Ts time.Time
 }
 
-func initOrderbookRunner(tri *Tri) *OrderbookRunner {
+func Init(tri *tri.Tri) *OrderbookRunner {
 	fee := decimal.NewFromFloat(0.001)
 	orderbookRunner := &OrderbookRunner{
 		Fee:                  fee,
@@ -71,14 +82,14 @@ func initOrderbookRunner(tri *Tri) *OrderbookRunner {
 	return orderbookRunner
 }
 
-func (or *OrderbookRunner) setMessenger(messenger *Messenger) {
-	or.Messenger = messenger
+func (or *OrderbookRunner) SetSlack(slack *notification.Slack) {
+	or.Slack = slack
 }
 
 func (or *OrderbookRunner) initOrderbookListeners() {
 	for symbol, _ := range or.Tri.SymbolOrdersMap {
 		or.OrderbookListeners[symbol] = &OrderbookListener{
-			orderbookDataCh: make(chan *OrderbookData),
+			OrderbookDataCh: make(chan *OrderbookData),
 		}
 	}
 }
@@ -97,7 +108,7 @@ func (or *OrderbookRunner) listenOrderbook(symbol string) {
 	listener := or.OrderbookListeners[symbol]
 	for {
 		select {
-		case orderbookData := <-listener.orderbookDataCh:
+		case orderbookData := <-listener.OrderbookDataCh:
 			if listener.ignoreIncomingOrder {
 				continue
 			}
@@ -117,10 +128,10 @@ func (or *OrderbookRunner) setOrder(symbol string, listener *OrderbookListener, 
 	defer func() { listener.ignoreIncomingOrder = false }()
 
 	if len(orderbookData.Bids) > 0 {
-		or.Tri.SetOrder(BID, orderbookData.Symbol, orderbookData.Bids[0], orderbookData.Seq)
+		or.Tri.SetOrder(order.BID, orderbookData.Symbol, orderbookData.Bids[0], orderbookData.Seq)
 	}
 	if len(orderbookData.Asks) > 0 {
-		or.Tri.SetOrder(ASK, orderbookData.Symbol, orderbookData.Asks[0], orderbookData.Seq)
+		or.Tri.SetOrder(order.ASK, orderbookData.Symbol, orderbookData.Asks[0], orderbookData.Seq)
 	}
 
 	or.calculateTriangularArbitrage(symbol, listener)
@@ -194,7 +205,7 @@ func (or *OrderbookRunner) handleWatchMsgs() {
 	defer ticker.Stop()
 
 	var combinedMsg string
-	mostProfitMap := make(map[*Combination]*MostProfit)
+	mostProfitMap := make(map[*tri.Combination]*MostProfit)
 	for {
 		select {
 		case mostProfit := <-or.ChannelWatch:
@@ -209,11 +220,11 @@ func (or *OrderbookRunner) handleWatchMsgs() {
 			for _, mostProfit := range mostProfitMap {
 				combinedMsg += fmt.Sprintf("%s %s\n", mostProfit.Ts.UTC().Add(8*time.Hour).Format("15:04:05"), mostProfit.tradeMsg())
 			}
-			go or.Messenger.sendToChannel(or.Messenger.ChannelMap[SLACK_CHANNEL_WATCH].Name, combinedMsg)
+			go or.Slack.SendToChannel(or.Slack.ChannelMap[notification.SLACK_CHANNEL_WATCH].Name, combinedMsg)
 
 			// Reset the combined message
 			combinedMsg = ""
-			mostProfitMap = make(map[*Combination]*MostProfit)
+			mostProfitMap = make(map[*tri.Combination]*MostProfit)
 		}
 	}
 }
@@ -233,7 +244,7 @@ func (or *OrderbookRunner) handleSystemLogsMsgs() {
 			if len(counters) == 0 {
 				continue
 			}
-			or.Messenger.SystemLogs(fmt.Sprintf("%s %+v", time.Now().UTC().Add(8*time.Hour).Format("15:04:05"), counters))
+			or.Slack.SystemLogs(fmt.Sprintf("%s %+v", time.Now().UTC().Add(8*time.Hour).Format("15:04:05"), counters))
 
 			// Reset the counters
 			counters = make(map[string]int64)

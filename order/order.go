@@ -1,4 +1,4 @@
-package main
+package order
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	BID               = "bid"
+	ASK               = "ask"
 	CATEGORY_SPOT     = "spot"
 	SIDE_BUY          = "Buy"
 	SIDE_SELL         = "Sell"

@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto-triangular-arbitrage-watch/notification"
+	"crypto-triangular-arbitrage-watch/runner"
+	"crypto-triangular-arbitrage-watch/tri"
+	"crypto-triangular-arbitrage-watch/ws"
 	"fmt"
 	"log"
 	"strings"
@@ -11,26 +15,26 @@ import (
 func main() {
 	loadEnvConfig()
 
-	messenger := initMessenger()
+	slack := notification.Init()
 	// Listen incoming messages and store these messages into buffer, so that it won't reach the rate limits of slack
-	go messenger.handleChannelSystemLogs()
-	messenger.SystemLogs("Config has been loaded successfully.")
-	messenger.SystemLogs(fmt.Sprintf("ENV: %s", viper.GetString("ENV")))
+	go slack.HandleChannelSystemLogs()
+	slack.SystemLogs("Config has been loaded successfully.")
+	slack.SystemLogs(fmt.Sprintf("ENV: %s", viper.GetString("ENV")))
 	log.Println("DEBUG_PRINT_MESSAGE:", viper.GetBool("DEBUG_PRINT_MESSAGE"))
 	log.Println("DEBUG_PRINT_MOST_PROFIT:", viper.GetBool("DEBUG_PRINT_MOST_PROFIT"))
 
-	tri := initTri()
-	tri.setMessenger(messenger)
-	tri.printAllSymbols()
+	tri := tri.Init()
+	tri.SetSlack(slack)
+	tri.PrintAllSymbols()
 	// tri.printAllCombinations()
 
-	orderbookRunner := initOrderbookRunner(tri)
-	orderbookRunner.setMessenger(messenger)
+	orderbookRunner := runner.Init(tri)
+	orderbookRunner.SetSlack(slack)
 	go orderbookRunner.ListenAll()
 
 	// Have to be after initTri as it will set klines
-	wsClient := initWsClient(tri, orderbookRunner)
-	wsClient.setMessenger(messenger)
+	wsClient := ws.Init(tri, orderbookRunner)
+	wsClient.SetSlack(slack)
 	go wsClient.HandlePrivateChannel() // block
 	wsClient.HandlePublicChannel()     // block
 }

@@ -1,4 +1,4 @@
-package main
+package ws
 
 import (
 	"crypto/hmac"
@@ -42,9 +42,9 @@ func (ws *WsClient) HandlePrivateChannel() {
 
 	for {
 		if err := ws.listenPrivateChannel(topics); err != nil {
-			ws.Messenger.SystemLogs(fmt.Sprintf("Private channel connection, error: %v", err))
+			ws.Slack.SystemLogs(fmt.Sprintf("Private channel connection, error: %v", err))
 		}
-		ws.Messenger.SystemLogs("Private channel connection reconnecting...")
+		ws.Slack.SystemLogs("Private channel connection reconnecting...")
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -84,7 +84,7 @@ func (ws *WsClient) listenPrivateChannel(topics []string) error {
 	if !proceed {
 		return nil
 	}
-	ws.Messenger.SystemLogs("auth succeed!")
+	ws.Slack.SystemLogs("auth succeed!")
 
 	// Subscribe order status, wallet, etc.
 	if err = conn.WriteJSON(MessageReq{Op: "subscribe", Args: topics}); err != nil {

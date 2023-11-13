@@ -1,4 +1,4 @@
-package main
+package ws
 
 import (
 	"fmt"
@@ -9,14 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
-
-type OrderbookData struct {
-	Symbol   string  `json:"s"`
-	Bids     []Price `json:"b"`
-	Asks     []Price `json:"a"`
-	UpdateId int64   `json:"u"`   // Update ID. It's a sequence. Occasionally, you'll receive "u"=1, which is a snapshot data due to the restart of the service. So please overwrite your local orderbook
-	Seq      int64   `json:"seq"` // You can use this field to compare different levels orderbook data, and for the smaller seq, then it means the data is generated earlier.
-}
 
 func (ws *WsClient) HandlePublicChannel() {
 	var wg sync.WaitGroup
@@ -38,9 +30,9 @@ func (ws *WsClient) HandlePublicChannel() {
 func (ws *WsClient) listenOrderbooksWithRetry(connNum int, topics []string) {
 	for {
 		if err := ws.listenOrderbooks(connNum, topics); err != nil {
-			ws.Messenger.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) error: %v", connNum, err))
+			ws.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) error: %v", connNum, err))
 		}
-		ws.Messenger.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) reconnecting...", connNum))
+		ws.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) reconnecting...", connNum))
 		time.Sleep(3 * time.Second)
 	}
 }
@@ -73,7 +65,7 @@ func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 	}()
 
 	// Handle incoming messages
-	ws.Messenger.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) listening...", connNum))
+	ws.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) listening...", connNum))
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 	for {

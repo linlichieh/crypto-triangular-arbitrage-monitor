@@ -1,6 +1,8 @@
-package main
+package tri
 
 import (
+	"crypto-triangular-arbitrage-watch/notification"
+	"crypto-triangular-arbitrage-watch/order"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,16 +11,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const (
-	BID = "bid"
-	ASK = "ask"
-)
+type Price []string
 
 // symbol -> potential combination
 type Tri struct {
 	SymbolOrdersMap       map[string]*SymbolOrder // to store bid and ask price for each symbol
 	SymbolCombinationsMap map[string][]*Combination
-	Messenger             *Messenger
+	Slack                 *notification.Slack
 	OrderbookTopics       map[string]string
 }
 
@@ -41,7 +40,7 @@ type Order struct {
 	Size  decimal.Decimal
 }
 
-func initTri() *Tri {
+func Init() *Tri {
 	tri := &Tri{
 		SymbolOrdersMap:       make(map[string]*SymbolOrder),
 		SymbolCombinationsMap: make(map[string][]*Combination),
@@ -51,8 +50,8 @@ func initTri() *Tri {
 	return tri
 }
 
-func (tri *Tri) setMessenger(messenger *Messenger) {
-	tri.Messenger = messenger
+func (tri *Tri) SetSlack(slack *notification.Slack) {
+	tri.Slack = slack
 }
 
 func (tri *Tri) buildSymbolCombinations() {
@@ -114,23 +113,23 @@ func (tri *Tri) SetOrder(action string, sym string, price Price, seq int64) erro
 		return err
 	}
 	switch action {
-	case BID:
+	case order.BID:
 		tri.SymbolOrdersMap[sym].Bid = &Order{Price: p, Size: s}
-	case ASK:
+	case order.ASK:
 		tri.SymbolOrdersMap[sym].Ask = &Order{Price: p, Size: s}
 	}
 	return nil
 }
 
-func (tri *Tri) printAllSymbols() {
+func (tri *Tri) PrintAllSymbols() {
 	var symbols []string
 	for symbol := range tri.SymbolOrdersMap {
 		symbols = append(symbols, symbol)
 	}
-	tri.Messenger.SystemLogs(fmt.Sprintf("Symbols: %v", symbols))
+	tri.Slack.SystemLogs(fmt.Sprintf("Symbols: %v", symbols))
 }
 
-func (tri *Tri) printAllCombinations() {
+func (tri *Tri) PrintAllCombinations() {
 	msg := "Symbol combinations:"
 	for baseSymbol, combinations := range tri.SymbolCombinationsMap {
 		msg += fmt.Sprintf("\n  %s", baseSymbol)
