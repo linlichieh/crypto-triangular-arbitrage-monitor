@@ -2,7 +2,7 @@ package tri
 
 import (
 	"crypto-triangular-arbitrage-watch/notification"
-	"crypto-triangular-arbitrage-watch/order"
+	"crypto-triangular-arbitrage-watch/trade"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -113,9 +113,9 @@ func (tri *Tri) UpdatePrice(action string, sym string, price Price, seq int64) e
 		return err
 	}
 	switch action {
-	case order.BID:
+	case trade.BID:
 		tri.SymbolOrdersMap[sym].Bid = &Order{Price: p, Size: s}
-	case order.ASK:
+	case trade.ASK:
 		tri.SymbolOrdersMap[sym].Ask = &Order{Price: p, Size: s}
 	}
 	return nil

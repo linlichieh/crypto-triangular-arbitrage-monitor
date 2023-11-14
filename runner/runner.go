@@ -2,7 +2,7 @@ package runner
 
 import (
 	"crypto-triangular-arbitrage-watch/notification"
-	"crypto-triangular-arbitrage-watch/order"
+	"crypto-triangular-arbitrage-watch/trade"
 	"crypto-triangular-arbitrage-watch/tri"
 	"fmt"
 	"log"
@@ -48,7 +48,7 @@ type OrderbookRunner struct {
 	ChannelWatch         chan *MostProfit
 	ChannelSystemLogs    chan *MostProfit
 	DebugPrintMostProfit bool
-	CalculateTriArb      bool // Stupid solution for manual testing that doesn't need tri arb calculation
+	CalculateTriArb      bool
 }
 
 type OrderbookListener struct {
@@ -130,10 +130,10 @@ func (or *OrderbookRunner) UpdateBidAskPrice(symbol string, listener *OrderbookL
 	defer func() { listener.ignoreIncomingOrder = false }()
 
 	if len(orderbookData.Bids) > 0 {
-		or.Tri.UpdatePrice(order.BID, orderbookData.Symbol, orderbookData.Bids[0], orderbookData.Seq)
+		or.Tri.UpdatePrice(trade.BID, orderbookData.Symbol, orderbookData.Bids[0], orderbookData.Seq)
 	}
 	if len(orderbookData.Asks) > 0 {
-		or.Tri.UpdatePrice(order.ASK, orderbookData.Symbol, orderbookData.Asks[0], orderbookData.Seq)
+		or.Tri.UpdatePrice(trade.ASK, orderbookData.Symbol, orderbookData.Asks[0], orderbookData.Seq)
 	}
 
 	if or.CalculateTriArb {

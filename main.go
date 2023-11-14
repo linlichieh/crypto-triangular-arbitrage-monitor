@@ -3,6 +3,7 @@ package main
 import (
 	"crypto-triangular-arbitrage-watch/notification"
 	"crypto-triangular-arbitrage-watch/runner"
+	"crypto-triangular-arbitrage-watch/trade"
 	"crypto-triangular-arbitrage-watch/tri"
 	"crypto-triangular-arbitrage-watch/ws"
 	"fmt"
@@ -32,9 +33,12 @@ func main() {
 	orderbookRunner.SetSlack(slack)
 	go orderbookRunner.ListenAll()
 
+	trade := trade.Init()
+
 	// Have to be after initTri as it will set klines
 	wsClient := ws.Init()
 	wsClient.SetTri(tri)
+	wsClient.SetTrade(trade)
 	wsClient.SetOrderbookRunner(orderbookRunner)
 	wsClient.SetSlack(slack)
 	go wsClient.HandlePrivateChannel() // block

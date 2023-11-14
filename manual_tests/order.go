@@ -113,6 +113,7 @@ func (c *Client) tri() {
 	tri := tri.Init()
 	tri.SetSlack(slack)
 	tri.PrintAllSymbols()
+	tri.PrintAllCombinations()
 	orderbookRunner := runner.Init(tri)
 	orderbookRunner.CalculateTriArb = false
 	orderbookRunner.SetSlack(slack)
@@ -128,7 +129,7 @@ func (c *Client) tri() {
 	for symbol, _ := range tri.SymbolOrdersMap {
 		allSymbols = append(allSymbols, symbol)
 	}
-	fmt.Println(allSymbols)
+	fmt.Println("all symbols:", allSymbols)
 	for {
 		if tri.SymbolOrdersMap[allSymbols[0]].Ready() && tri.SymbolOrdersMap[allSymbols[1]].Ready() && tri.SymbolOrdersMap[allSymbols[2]].Ready() {
 			break
@@ -137,6 +138,12 @@ func (c *Client) tri() {
 		time.Sleep(100 * time.Millisecond)
 	}
 	log.Printf("ready: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
+
+	log.Printf("%s: %v\n", allSymbols[0], tri.SymbolCombinationsMap)
+	combination := tri.SymbolCombinationsMap[allSymbols[0]][0] // For testing, just get the first combination
+	log.Printf("%+v\n", combination)
+
+	// TODO trade tri
 
 	// TODO
 	// Conduct tri trade

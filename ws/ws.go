@@ -2,8 +2,8 @@ package ws
 
 import (
 	"crypto-triangular-arbitrage-watch/notification"
-	"crypto-triangular-arbitrage-watch/order"
 	"crypto-triangular-arbitrage-watch/runner"
+	"crypto-triangular-arbitrage-watch/trade"
 	"crypto-triangular-arbitrage-watch/tri"
 	"encoding/json"
 	"fmt"
@@ -16,6 +16,7 @@ import (
 
 type WsClient struct {
 	Tri               *tri.Tri
+	Trade             *trade.Trade
 	OrderbookRunner   *runner.OrderbookRunner
 	Slack             *notification.Slack
 	OrderbookTopicReg *regexp.Regexp
@@ -52,6 +53,10 @@ func Init() *WsClient {
 
 func (ws *WsClient) SetTri(tri *tri.Tri) {
 	ws.Tri = tri
+}
+
+func (ws *WsClient) SetTrade(trade *trade.Trade) {
+	ws.Trade = trade
 }
 
 func (ws *WsClient) SetOrderbookRunner(orderbookRunner *runner.OrderbookRunner) {
@@ -133,7 +138,7 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 				ws.Slack.SystemLogs(fmt.Sprintf("order.spot: %+v", data))
 				if data.Status == "PartiallyFilledCanceled" || data.Status == "Filled" {
 					switch data.Side {
-					case order.SIDE_BUY:
+					case trade.SIDE_BUY:
 						cumQty, err := decimal.NewFromString(data.CumQty)
 						if err != nil {
 							return fmt.Errorf("failed to new decimal 'cumQty' data, err: %v", err)
@@ -143,8 +148,9 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 							return fmt.Errorf("failed to new decimal 'cumFee' data, err: %v", err)
 						}
 						actualQty := cumQty.Sub(cumFee)
+						ws.Trade.ActualQty = actualQty
 						ws.Slack.SystemLogs(fmt.Sprintf("actualQty: %s", actualQty.String()))
-					case order.SIDE_SELL:
+					case trade.SIDE_SELL:
 						cumValue, err := decimal.NewFromString(data.CumValue)
 						if err != nil {
 							return fmt.Errorf("failed to new decimal 'cumQty' data, err: %v", err)
@@ -154,6 +160,7 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 							return fmt.Errorf("failed to new decimal 'cumFee' data, err: %v", err)
 						}
 						actualQty := cumValue.Sub(cumFee)
+						ws.Trade.ActualQty = actualQty
 						ws.Slack.SystemLogs(fmt.Sprintf("actualQty: %s", actualQty.String()))
 					}
 				}
@@ -165,6 +172,15 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 				return fmt.Errorf("failed to parse topic 'wallet' data, err: %v", err)
 			}
 			for _, data := range list {
+				for _, coin := range data.Coins {
+					if coin.Coin == "USDT" {
+						bal, err := decimal.NewFromString(coin.Balance)
+						if err != nil {
+							return err
+						}
+						ws.Trade.USDT = bal
+					}
+				}
 				ws.Slack.SystemLogs(fmt.Sprintf("wallet coins: %+v", data.Coins))
 			}
 		}
