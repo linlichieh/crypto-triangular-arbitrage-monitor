@@ -68,6 +68,10 @@ Sell BTC with qty=0.000294
 
     make sell qty=0.000294
 
+Test tri trade
+
+    make trii
+
 # Bybit API response
 
 ### public channel

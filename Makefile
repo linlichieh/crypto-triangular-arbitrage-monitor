@@ -1,3 +1,4 @@
+# Please see README for details
 first_time:
 	rsync -av -e ssh deployment/crypto-triangular-arbitrage-watch.service tri:/home/ec2-user/app/
 deploy:
@@ -13,3 +14,5 @@ buy:
 	go run manual_tests/order.go --action="Buy" --qty=$(qty)
 sell:
 	go run manual_tests/order.go --action="Sell" --qty=$(qty)
+trii:
+	go run manual_tests/order.go --action="trii"

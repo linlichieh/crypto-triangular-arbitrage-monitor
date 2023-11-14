@@ -102,7 +102,7 @@ func (tri *Tri) loadSymbolsJson() map[string]interface{} {
 	return data
 }
 
-func (tri *Tri) SetOrder(action string, sym string, price Price, seq int64) error {
+func (tri *Tri) UpdatePrice(action string, sym string, price Price, seq int64) error {
 	tri.SymbolOrdersMap[sym].Seq = seq
 	p, err := decimal.NewFromString(price[0])
 	if err != nil {
@@ -119,6 +119,17 @@ func (tri *Tri) SetOrder(action string, sym string, price Price, seq int64) erro
 		tri.SymbolOrdersMap[sym].Ask = &Order{Price: p, Size: s}
 	}
 	return nil
+}
+
+func (c *Combination) Ready() bool {
+	if c.SymbolOrders[0].Ready() && c.SymbolOrders[1].Ready() && c.SymbolOrders[2].Ready() {
+		return true
+	}
+	return false
+}
+
+func (so *SymbolOrder) Ready() bool {
+	return so.Bid != nil && so.Ask != nil
 }
 
 func (tri *Tri) PrintAllSymbols() {

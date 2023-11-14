@@ -33,7 +33,9 @@ func main() {
 	go orderbookRunner.ListenAll()
 
 	// Have to be after initTri as it will set klines
-	wsClient := ws.Init(tri, orderbookRunner)
+	wsClient := ws.Init()
+	wsClient.SetTri(tri)
+	wsClient.SetOrderbookRunner(orderbookRunner)
 	wsClient.SetSlack(slack)
 	go wsClient.HandlePrivateChannel() // block
 	wsClient.HandlePublicChannel()     // block

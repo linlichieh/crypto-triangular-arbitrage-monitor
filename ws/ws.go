@@ -38,18 +38,24 @@ type TopicResp struct {
 	Data  json.RawMessage `json:"data"`
 }
 
-func Init(tri *tri.Tri, orderbookRunner *runner.OrderbookRunner) *WsClient {
+func Init() *WsClient {
 	reg, err := regexp.Compile(`^orderbook\..+`)
 	if err != nil {
 		log.Println("Error compiling regex:", err)
 	}
 
 	return &WsClient{
-		Tri:               tri,
-		OrderbookRunner:   orderbookRunner,
 		DebugPrintMessage: viper.GetBool("DEBUG_PRINT_MESSAGE"),
 		OrderbookTopicReg: reg,
 	}
+}
+
+func (ws *WsClient) SetTri(tri *tri.Tri) {
+	ws.Tri = tri
+}
+
+func (ws *WsClient) SetOrderbookRunner(orderbookRunner *runner.OrderbookRunner) {
+	ws.OrderbookRunner = orderbookRunner
 }
 
 func (ws *WsClient) SetSlack(slack *notification.Slack) {

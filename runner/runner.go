@@ -48,6 +48,7 @@ type OrderbookRunner struct {
 	ChannelWatch         chan *MostProfit
 	ChannelSystemLogs    chan *MostProfit
 	DebugPrintMostProfit bool
+	CalculateTriArb      bool // Stupid solution for manual testing that doesn't need tri arb calculation
 }
 
 type OrderbookListener struct {
@@ -77,6 +78,7 @@ func Init(tri *tri.Tri) *OrderbookRunner {
 		ChannelWatch:         make(chan *MostProfit),
 		ChannelSystemLogs:    make(chan *MostProfit),
 		DebugPrintMostProfit: viper.GetBool("DEBUG_PRINT_MOST_PROFIT"),
+		CalculateTriArb:      true,
 	}
 	orderbookRunner.initOrderbookListeners()
 	return orderbookRunner
@@ -119,22 +121,24 @@ func (or *OrderbookRunner) listenOrderbook(symbol string) {
 			}
 
 			listener.ignoreIncomingOrder = true
-			or.setOrder(symbol, listener, orderbookData)
+			or.UpdateBidAskPrice(symbol, listener, orderbookData)
 		}
 	}
 }
 
-func (or *OrderbookRunner) setOrder(symbol string, listener *OrderbookListener, orderbookData *OrderbookData) {
+func (or *OrderbookRunner) UpdateBidAskPrice(symbol string, listener *OrderbookListener, orderbookData *OrderbookData) {
 	defer func() { listener.ignoreIncomingOrder = false }()
 
 	if len(orderbookData.Bids) > 0 {
-		or.Tri.SetOrder(order.BID, orderbookData.Symbol, orderbookData.Bids[0], orderbookData.Seq)
+		or.Tri.UpdatePrice(order.BID, orderbookData.Symbol, orderbookData.Bids[0], orderbookData.Seq)
 	}
 	if len(orderbookData.Asks) > 0 {
-		or.Tri.SetOrder(order.ASK, orderbookData.Symbol, orderbookData.Asks[0], orderbookData.Seq)
+		or.Tri.UpdatePrice(order.ASK, orderbookData.Symbol, orderbookData.Asks[0], orderbookData.Seq)
 	}
 
-	or.calculateTriangularArbitrage(symbol, listener)
+	if or.CalculateTriArb {
+		or.calculateTriangularArbitrage(symbol, listener)
+	}
 }
 
 func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener *OrderbookListener) {
@@ -149,12 +153,7 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 			return
 		}
 		// Make sure all symbols get latest price
-		if combination.SymbolOrders[0].Bid == nil ||
-			combination.SymbolOrders[0].Ask == nil ||
-			combination.SymbolOrders[1].Bid == nil ||
-			combination.SymbolOrders[1].Ask == nil ||
-			combination.SymbolOrders[2].Bid == nil ||
-			combination.SymbolOrders[2].Ask == nil {
+		if !combination.Ready() {
 			return
 		}
 

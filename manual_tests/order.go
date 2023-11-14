@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto-triangular-arbitrage-watch/notification"
+	"crypto-triangular-arbitrage-watch/runner"
+	"crypto-triangular-arbitrage-watch/tri"
+	"crypto-triangular-arbitrage-watch/ws"
 	"flag"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 	bybit "github.com/wuhewuhe/bybit.go.api"
@@ -40,6 +45,8 @@ func main() {
 		client.buy(*qty)
 	case SIDE_SELL:
 		client.sell(*qty)
+	case "trii":
+		client.tri()
 	default:
 		log.Fatalf("action '%s' not supported", *action)
 	}
@@ -98,4 +105,41 @@ func (c *Client) sell(qty string) {
 	} else {
 		fmt.Println("fail")
 	}
+}
+
+func (c *Client) tri() {
+	slack := notification.Init()
+	go slack.HandleChannelSystemLogs()
+	tri := tri.Init()
+	tri.SetSlack(slack)
+	tri.PrintAllSymbols()
+	orderbookRunner := runner.Init(tri)
+	orderbookRunner.CalculateTriArb = false
+	orderbookRunner.SetSlack(slack)
+	go orderbookRunner.ListenAll()
+	wsClient := ws.Init()
+	wsClient.SetTri(tri)
+	wsClient.SetOrderbookRunner(orderbookRunner)
+	wsClient.SetSlack(slack)
+	go wsClient.HandlePrivateChannel()
+	go wsClient.HandlePublicChannel() // block
+
+	var allSymbols []string
+	for symbol, _ := range tri.SymbolOrdersMap {
+		allSymbols = append(allSymbols, symbol)
+	}
+	fmt.Println(allSymbols)
+	for {
+		if tri.SymbolOrdersMap[allSymbols[0]].Ready() && tri.SymbolOrdersMap[allSymbols[1]].Ready() && tri.SymbolOrdersMap[allSymbols[2]].Ready() {
+			break
+		}
+		log.Printf("not ready: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
+		time.Sleep(100 * time.Millisecond)
+	}
+	log.Printf("ready: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
+
+	// TODO
+	// Conduct tri trade
+
+	select {}
 }
