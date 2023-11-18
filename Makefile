@@ -14,5 +14,9 @@ buy:
 	go run manual_tests/order.go --action="Buy" --qty=$(qty)
 sell:
 	go run manual_tests/order.go --action="Sell" --qty=$(qty)
+instrument:
+	go run manual_tests/order.go --action="instrument" --sym=$(sym)
+all_instruments:
+	go run manual_tests/order.go --action="all_instruments"
 trii:
 	go run manual_tests/order.go --action="trii"

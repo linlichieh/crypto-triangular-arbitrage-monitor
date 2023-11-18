@@ -68,6 +68,14 @@ Sell BTC with qty=0.000294
 
     make sell qty=0.000294
 
+Get Instruments Info
+
+    make instrument sym=BTCUSDT
+
+Get Instruments Info
+
+    make all_instruments
+
 Test tri trade
 
     make trii
