@@ -1,4 +1,4 @@
-package ws
+package bybit
 
 import (
 	"crypto/hmac"
@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -37,23 +36,19 @@ type Coin struct {
 	Balance string `json:"walletBalance"`
 }
 
-func (ws *WsClient) HandlePrivateChannel() {
+func (b *Bybit) HandlePrivateChannel() {
 	topics := []string{"order.spot", "execution.spot", "wallet"} // "order.spot", "execution.spot", "wallet"
 
 	for {
-		if err := ws.listenPrivateChannel(topics); err != nil {
-			ws.Slack.SystemLogs(fmt.Sprintf("Private channel connection, error: %v", err))
+		if err := b.listenPrivateChannel(topics); err != nil {
+			b.Slack.SystemLogs(fmt.Sprintf("Private channel connection, error: %v", err))
 		}
-		ws.Slack.SystemLogs("Private channel connection reconnecting...")
+		b.Slack.SystemLogs("Private channel connection reconnecting...")
 		time.Sleep(3 * time.Second)
 	}
 }
 
-func (ws *WsClient) listenPrivateChannel(topics []string) error {
-	header := make(http.Header)
-	header.Set("api_key", viper.GetString("BYBIT_API_KEY"))
-	header.Set("api_secret", viper.GetString("BYBIT_API_SECRET"))
-
+func (b *Bybit) listenPrivateChannel(topics []string) error {
 	var err error
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("BYBIT_PRIVATE_WS"), nil)
 	if err != nil {
@@ -63,7 +58,7 @@ func (ws *WsClient) listenPrivateChannel(topics []string) error {
 
 	// Auth message
 	expires := strconv.FormatInt(time.Now().Unix()*1000+1000, 10)
-	signature := ws.generateSignature(expires)
+	signature := b.generateSignature(expires)
 	req := MessageReq{
 		Op:   "auth",
 		Args: []string{viper.GetString("BYBIT_API_KEY"), expires, signature},
@@ -77,14 +72,14 @@ func (ws *WsClient) listenPrivateChannel(topics []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read auth message, err: %v", err)
 	}
-	proceed, err := ws.handleOpResp(message)
+	proceed, err := b.handleOpResp(message)
 	if err != nil {
 		return err
 	}
 	if !proceed {
 		return nil
 	}
-	ws.Slack.SystemLogs("auth succeed!")
+	b.Slack.SystemLogs("auth succeed!")
 
 	// Subscribe order status, wallet, etc.
 	if err = conn.WriteJSON(MessageReq{Op: "subscribe", Args: topics}); err != nil {
@@ -116,10 +111,10 @@ func (ws *WsClient) listenPrivateChannel(topics []string) error {
 				return fmt.Errorf("failed to send op, err: %v", err)
 			}
 		case message := <-msgChan:
-			if ws.DebugPrintMessage {
+			if b.DebugPrintMessage {
 				log.Println("private:", string(message))
 			}
-			err = ws.handleResponse(message)
+			err = b.handleResponse(message)
 			if err != nil {
 				return fmt.Errorf("failed to parse private message during running, err: %v", err)
 			}
@@ -129,7 +124,7 @@ func (ws *WsClient) listenPrivateChannel(topics []string) error {
 	}
 }
 
-func (ws *WsClient) generateSignature(expires string) string {
+func (b *Bybit) generateSignature(expires string) string {
 	apiSecret := viper.GetString("BYBIT_API_SECRET")
 
 	// Create a new HMAC by defining the hash type and the key (as byte array)

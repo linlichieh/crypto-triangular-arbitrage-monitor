@@ -1,4 +1,4 @@
-package ws
+package bybit
 
 import (
 	"fmt"
@@ -10,9 +10,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-func (ws *WsClient) HandlePublicChannel() {
+func (b *Bybit) HandlePublicChannel() {
 	var wg sync.WaitGroup
-	topics := ws.getOrderbookTopics()
+	topics := b.getOrderbookTopics()
 	chunkSize := 10 // bybit only accepts up to 10 symbols per connection
 	connNum := 1
 	for i := 0; i < len(topics); i += chunkSize {
@@ -21,23 +21,23 @@ func (ws *WsClient) HandlePublicChannel() {
 			end = len(topics)
 		}
 		wg.Add(1)
-		go ws.listenOrderbooksWithRetry(connNum, topics[i:end])
+		go b.listenOrderbooksWithRetry(connNum, topics[i:end])
 		connNum++
 	}
 	wg.Wait()
 }
 
-func (ws *WsClient) listenOrderbooksWithRetry(connNum int, topics []string) {
+func (b *Bybit) listenOrderbooksWithRetry(connNum int, topics []string) {
 	for {
-		if err := ws.listenOrderbooks(connNum, topics); err != nil {
-			ws.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) error: %v", connNum, err))
+		if err := b.listenOrderbooks(connNum, topics); err != nil {
+			b.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) error: %v", connNum, err))
 		}
-		ws.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) reconnecting...", connNum))
+		b.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) reconnecting...", connNum))
 		time.Sleep(3 * time.Second)
 	}
 }
 
-func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
+func (b *Bybit) listenOrderbooks(connNum int, topics []string) error {
 	var err error
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("BYBIT_PUBLIC_WS_SPOT"), nil)
 	if err != nil {
@@ -65,7 +65,7 @@ func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 	}()
 
 	// Handle incoming messages
-	ws.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) listening...", connNum))
+	b.Slack.SystemLogs(fmt.Sprintf("Orderbooks connection(%d) listening...", connNum))
 	ticker := time.NewTicker(20 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -77,10 +77,10 @@ func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 				return fmt.Errorf("failed to send op, err: %v", err)
 			}
 		case message := <-msgChan:
-			if ws.DebugPrintMessage {
+			if b.DebugPrintMessage {
 				log.Println("orderbook:", string(message))
 			}
-			err = ws.handleResponse(message)
+			err = b.handleResponse(message)
 			if err != nil {
 				return fmt.Errorf("failed to parse orderbook message during running, err: %v", err)
 			}
@@ -90,13 +90,13 @@ func (ws *WsClient) listenOrderbooks(connNum int, topics []string) error {
 	}
 }
 
-func (ws *WsClient) getOrderbookTopics() []string {
+func (b *Bybit) getOrderbookTopics() []string {
 	var topics []string
-	for symbol, _ := range ws.Tri.SymbolCombinationsMap {
-		if _, ok := ws.Tri.OrderbookTopics[symbol]; !ok {
+	for symbol, _ := range b.Tri.SymbolCombinationsMap {
+		if _, ok := b.Tri.OrderbookTopics[symbol]; !ok {
 			log.Fatalf("Please confirm that orderbook topic of '%s' exists in the config", symbol)
 		}
-		topics = append(topics, ws.Tri.OrderbookTopics[symbol])
+		topics = append(topics, b.Tri.OrderbookTopics[symbol])
 	}
 	return topics
 }

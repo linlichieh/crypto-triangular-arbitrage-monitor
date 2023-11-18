@@ -1,4 +1,4 @@
-package ws
+package bybit
 
 import (
 	"crypto-triangular-arbitrage-watch/notification"
@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-type WsClient struct {
+type Bybit struct {
 	Tri               *tri.Tri
 	Trade             *trade.Trade
 	OrderbookRunner   *runner.OrderbookRunner
@@ -39,50 +39,50 @@ type TopicResp struct {
 	Data  json.RawMessage `json:"data"`
 }
 
-func Init() *WsClient {
+func Init() *Bybit {
 	reg, err := regexp.Compile(`^orderbook\..+`)
 	if err != nil {
 		log.Println("Error compiling regex:", err)
 	}
 
-	return &WsClient{
+	return &Bybit{
 		DebugPrintMessage: viper.GetBool("DEBUG_PRINT_MESSAGE"),
 		OrderbookTopicReg: reg,
 	}
 }
 
-func (ws *WsClient) SetTri(tri *tri.Tri) {
-	ws.Tri = tri
+func (b *Bybit) SetTri(tri *tri.Tri) {
+	b.Tri = tri
 }
 
-func (ws *WsClient) SetTrade(trade *trade.Trade) {
-	ws.Trade = trade
+func (b *Bybit) SetTrade(trade *trade.Trade) {
+	b.Trade = trade
 }
 
-func (ws *WsClient) SetOrderbookRunner(orderbookRunner *runner.OrderbookRunner) {
-	ws.OrderbookRunner = orderbookRunner
+func (b *Bybit) SetOrderbookRunner(orderbookRunner *runner.OrderbookRunner) {
+	b.OrderbookRunner = orderbookRunner
 }
 
-func (ws *WsClient) SetSlack(slack *notification.Slack) {
-	ws.Slack = slack
+func (b *Bybit) SetSlack(slack *notification.Slack) {
+	b.Slack = slack
 }
 
-func (ws *WsClient) handleResponse(message []byte) error {
-	proceed, err := ws.handleOpResp(message)
+func (b *Bybit) handleResponse(message []byte) error {
+	proceed, err := b.handleOpResp(message)
 	if err != nil {
 		return err
 	}
 	if !proceed {
 		return nil
 	}
-	return ws.handleTopicResp(message)
+	return b.handleTopicResp(message)
 }
 
 // There are 2 different formats of response
 // operation response e.g. subscribe, ping, auth
 // content response e.g. orderbook, wallet
 // bool in response means should it continue to parse the message?
-func (ws *WsClient) handleOpResp(message []byte) (bool, error) {
+func (b *Bybit) handleOpResp(message []byte) (bool, error) {
 	var opResp OpResp
 	err := json.Unmarshal(message, &opResp)
 	if err != nil {
@@ -108,7 +108,7 @@ func (ws *WsClient) handleOpResp(message []byte) (bool, error) {
 	}
 }
 
-func (ws *WsClient) handleTopicResp(message []byte) error {
+func (b *Bybit) handleTopicResp(message []byte) error {
 	var topicResp TopicResp
 	err := json.Unmarshal(message, &topicResp)
 	if err != nil {
@@ -118,7 +118,7 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 	// To prevent panic, it shouldn't happen, but just in case if Bybit returns unexpected data back
 	if topicResp.Topic != "" {
 		switch {
-		case ws.OrderbookTopicReg.MatchString(topicResp.Topic):
+		case b.OrderbookTopicReg.MatchString(topicResp.Topic):
 			var data runner.OrderbookData
 			err := json.Unmarshal(topicResp.Data, &data)
 			if err != nil {
@@ -126,7 +126,7 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 			}
 			// To prevent panic, it shouldn't happen, but just in case if Bybit returns unexpected data back
 			if data.Symbol != "" {
-				ws.OrderbookRunner.OrderbookListeners[data.Symbol].OrderbookDataCh <- &data
+				b.OrderbookRunner.OrderbookListeners[data.Symbol].OrderbookDataCh <- &data
 			}
 		case topicResp.Topic == "order.spot":
 			var list []OrderSpotData
@@ -135,7 +135,7 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 				return fmt.Errorf("failed to parse topic 'order.spot' data, err: %v", err)
 			}
 			for _, data := range list {
-				ws.Slack.SystemLogs(fmt.Sprintf("order.spot: %+v", data))
+				b.Slack.SystemLogs(fmt.Sprintf("order.spot: %+v", data))
 				if data.Status == "PartiallyFilledCanceled" || data.Status == "Filled" {
 					switch data.Side {
 					case trade.SIDE_BUY:
@@ -148,8 +148,8 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 							return fmt.Errorf("failed to new decimal 'cumFee' data, err: %v", err)
 						}
 						actualQty := cumQty.Sub(cumFee)
-						ws.Trade.ActualQty = actualQty
-						ws.Slack.SystemLogs(fmt.Sprintf("actualQty: %s", actualQty.String()))
+						b.Trade.ActualQty = actualQty
+						b.Slack.SystemLogs(fmt.Sprintf("actualQty: %s", actualQty.String()))
 					case trade.SIDE_SELL:
 						cumValue, err := decimal.NewFromString(data.CumValue)
 						if err != nil {
@@ -160,8 +160,8 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 							return fmt.Errorf("failed to new decimal 'cumFee' data, err: %v", err)
 						}
 						actualQty := cumValue.Sub(cumFee)
-						ws.Trade.ActualQty = actualQty
-						ws.Slack.SystemLogs(fmt.Sprintf("actualQty: %s", actualQty.String()))
+						b.Trade.ActualQty = actualQty
+						b.Slack.SystemLogs(fmt.Sprintf("actualQty: %s", actualQty.String()))
 					}
 				}
 			}
@@ -178,10 +178,10 @@ func (ws *WsClient) handleTopicResp(message []byte) error {
 						if err != nil {
 							return err
 						}
-						ws.Trade.USDT = bal
+						b.Trade.AfterTradeBalance = bal
 					}
 				}
-				ws.Slack.SystemLogs(fmt.Sprintf("wallet coins: %+v", data.Coins))
+				b.Slack.SystemLogs(fmt.Sprintf("wallet coins: %+v", data.Coins))
 			}
 		}
 		// case "execution.spot":

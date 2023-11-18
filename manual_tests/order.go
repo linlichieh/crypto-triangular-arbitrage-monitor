@@ -1,11 +1,11 @@
 package main
 
 import (
-	"context"
+	"crypto-triangular-arbitrage-watch/bybit"
 	"crypto-triangular-arbitrage-watch/notification"
 	"crypto-triangular-arbitrage-watch/runner"
+	"crypto-triangular-arbitrage-watch/trade"
 	"crypto-triangular-arbitrage-watch/tri"
-	"crypto-triangular-arbitrage-watch/ws"
 	"flag"
 	"fmt"
 	"log"
@@ -13,19 +13,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	bybit "github.com/wuhewuhe/bybit.go.api"
 )
-
-const (
-	CATEGORY_SPOT     = "spot"
-	SIDE_BUY          = "Buy"
-	SIDE_SELL         = "Sell"
-	ORDER_TYPE_MARKET = "Market"
-)
-
-type Client struct {
-	bybitClient *bybit.Client
-}
 
 func main() {
 	loadEnvConfig()
@@ -36,17 +24,11 @@ func main() {
 	// Parse the flags.
 	flag.Parse()
 
-	client := Client{
-		bybitClient: bybit.NewBybitHttpClient(viper.GetString("BYBIT_API_KEY"), viper.GetString("BYBIT_API_SECRET"), bybit.WithBaseURL(bybit.TESTNET)),
-	}
-
 	switch *action {
-	case SIDE_BUY:
-		client.buy(*qty)
-	case SIDE_SELL:
-		client.sell(*qty)
+	case trade.SIDE_BUY, trade.SIDE_SELL:
+		placeOrder(*action, *qty)
 	case "trii":
-		client.tri()
+		trii()
 	default:
 		log.Fatalf("action '%s' not supported", *action)
 	}
@@ -65,88 +47,57 @@ func loadEnvConfig() {
 	}
 }
 
-func (c *Client) buy(qty string) {
-	params := map[string]interface{}{
-		"category":  CATEGORY_SPOT,
-		"symbol":    "BTCUSDT",
-		"orderType": ORDER_TYPE_MARKET,
-		"side":      SIDE_BUY,
-		"qty":       qty,
-	}
-	orderResult, err := c.bybitClient.NewTradeService(params).PlaceOrder(context.Background())
+func placeOrder(side string, qty string) {
+	api := bybit.InitApi()
+	resp, err := api.PlaceOrder(side, "BTCUSDT", qty)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("err:", err)
 		return
 	}
-	fmt.Println(bybit.PrettyPrint(orderResult))
-	if orderResult.RetCode == 0 {
-		fmt.Println("success")
-	} else {
-		fmt.Println("fail")
-	}
+	log.Println(resp)
 }
 
-func (c *Client) sell(qty string) {
-	params := map[string]interface{}{
-		"category":  CATEGORY_SPOT,
-		"symbol":    "BTCUSDT",
-		"orderType": ORDER_TYPE_MARKET,
-		"side":      SIDE_SELL,
-		"qty":       qty,
-	}
-	orderResult, err := c.bybitClient.NewTradeService(params).PlaceOrder(context.Background())
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(bybit.PrettyPrint(orderResult))
-	if orderResult.RetCode == 0 {
-		fmt.Println("success")
-	} else {
-		fmt.Println("fail")
-	}
-}
-
-func (c *Client) tri() {
+func trii() {
+	// slack
 	slack := notification.Init()
 	go slack.HandleChannelSystemLogs()
+
+	// tri
 	tri := tri.Init()
 	tri.SetSlack(slack)
 	tri.PrintAllSymbols()
 	tri.PrintAllCombinations()
+
+	// ordrebookRunner
 	orderbookRunner := runner.Init(tri)
 	orderbookRunner.CalculateTriArb = false
 	orderbookRunner.SetSlack(slack)
 	go orderbookRunner.ListenAll()
-	wsClient := ws.Init()
-	wsClient.SetTri(tri)
-	wsClient.SetOrderbookRunner(orderbookRunner)
-	wsClient.SetSlack(slack)
-	go wsClient.HandlePrivateChannel()
-	go wsClient.HandlePublicChannel() // block
 
+	// bybit
+	bybit := bybit.Init()
+	bybit.SetTri(tri)
+	bybit.SetOrderbookRunner(orderbookRunner)
+	bybit.SetSlack(slack)
+	go bybit.HandlePrivateChannel()
+	go bybit.HandlePublicChannel() // block
+
+	// Check if symbols are ready
 	var allSymbols []string
 	for symbol, _ := range tri.SymbolOrdersMap {
 		allSymbols = append(allSymbols, symbol)
 	}
-	fmt.Println("all symbols:", allSymbols)
+	log.Println("all symbols:", allSymbols)
 	for {
 		if tri.SymbolOrdersMap[allSymbols[0]].Ready() && tri.SymbolOrdersMap[allSymbols[1]].Ready() && tri.SymbolOrdersMap[allSymbols[2]].Ready() {
 			break
 		}
-		log.Printf("not ready: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
+		log.Printf("Not ready, waiting for new prices: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
 		time.Sleep(100 * time.Millisecond)
 	}
-	log.Printf("ready: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
-
-	log.Printf("%s: %v\n", allSymbols[0], tri.SymbolCombinationsMap)
+	log.Printf("Ready! new prices received: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
 	combination := tri.SymbolCombinationsMap[allSymbols[0]][0] // For testing, just get the first combination
-	log.Printf("%+v\n", combination)
-
-	// TODO trade tri
-
-	// TODO
-	// Conduct tri trade
+	log.Printf("Will use this combination: %s -> %s -> %s\n", combination.SymbolOrders[0].Symbol, combination.SymbolOrders[1].Symbol, combination.SymbolOrders[2].Symbol)
 
 	select {}
 }
