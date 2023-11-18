@@ -4,6 +4,7 @@ import (
 	"crypto-triangular-arbitrage-watch/bybit"
 	"crypto-triangular-arbitrage-watch/notification"
 	"crypto-triangular-arbitrage-watch/runner"
+	"crypto-triangular-arbitrage-watch/trade"
 	"crypto-triangular-arbitrage-watch/tri"
 	"fmt"
 	"log"
@@ -32,8 +33,12 @@ func main() {
 	orderbookRunner.SetSlack(slack)
 	go orderbookRunner.ListenAll()
 
+	// Trade
+	tra := trade.Init()
+
 	// Have to be after initTri as it will set klines
 	bybit := bybit.Init()
+	bybit.SetTrade(tra)
 	bybit.SetTri(tri)
 	bybit.SetOrderbookRunner(orderbookRunner)
 	bybit.SetSlack(slack)

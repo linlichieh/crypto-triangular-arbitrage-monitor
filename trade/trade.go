@@ -16,3 +16,7 @@ type Trade struct {
 	AfterTradeBalance  decimal.Decimal
 	ActualQty          decimal.Decimal
 }
+
+func Init() *Trade {
+	return &Trade{}
+}
