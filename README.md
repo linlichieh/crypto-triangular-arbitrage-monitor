@@ -80,6 +80,10 @@ Test tri trade
 
     make trii
 
+All symbols
+
+    make all_symbols
+
 # Bybit API response
 
 ### public channel

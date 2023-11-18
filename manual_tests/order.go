@@ -6,9 +6,12 @@ import (
 	"crypto-triangular-arbitrage-watch/runner"
 	"crypto-triangular-arbitrage-watch/trade"
 	"crypto-triangular-arbitrage-watch/tri"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -40,6 +43,8 @@ func main() {
 	case "all_instruments":
 		loadEnvConfig("prod-config")
 		allInstruments()
+	case "all_symbols":
+		allSymbols()
 	default:
 		log.Fatalf("action '%s' not supported", *action)
 	}
@@ -70,6 +75,59 @@ func placeOrder(side string, qty string) {
 		return
 	}
 	log.Println(resp)
+}
+
+func trii() {
+	// slack
+	slack := notification.Init()
+	go slack.HandleChannelSystemLogs()
+
+	// tri
+	tri := tri.Init()
+	tri.SetSlack(slack)
+	tri.PrintAllSymbols()
+	tri.PrintAllCombinations()
+
+	// ordrebookRunner
+	orderbookRunner := runner.Init(tri)
+	orderbookRunner.CalculateTriArb = false
+	orderbookRunner.SetSlack(slack)
+	go orderbookRunner.ListenAll()
+
+	// bybit
+	bybit := bybit.Init()
+	bybit.SetTri(tri)
+	bybit.SetOrderbookRunner(orderbookRunner)
+	bybit.SetSlack(slack)
+	go bybit.HandlePrivateChannel()
+	go bybit.HandlePublicChannel() // block
+
+	// Check if symbols are ready
+	var allSymbols []string
+	for symbol, _ := range tri.SymbolOrdersMap {
+		allSymbols = append(allSymbols, symbol)
+	}
+	log.Println("all symbols:", allSymbols)
+	for {
+		if tri.SymbolOrdersMap[allSymbols[0]].Ready() && tri.SymbolOrdersMap[allSymbols[1]].Ready() && tri.SymbolOrdersMap[allSymbols[2]].Ready() {
+			break
+		}
+		log.Printf("Not ready, waiting for new prices: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
+		time.Sleep(100 * time.Millisecond)
+	}
+	log.Printf("Ready! new prices received: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
+	combination := tri.SymbolCombinationsMap[allSymbols[0]][0] // For testing, just get the first combination
+	log.Printf("Will use this combination: %s -> %s -> %s\n", combination.SymbolOrders[0].Symbol, combination.SymbolOrders[1].Symbol, combination.SymbolOrders[2].Symbol)
+
+	// Tri trade
+	// api := bybit.InitApi()
+	// resp, err := api.PlaceOrder(side, "BTCUSDT", qty)
+	// if err != nil {
+	// log.Println("err:", err)
+	// return
+	// }
+
+	select {}
 }
 
 // TESTNET doesn't have MNTBTC, use prod bybit host
@@ -147,55 +205,71 @@ func allInstruments() {
 	}
 }
 
-func trii() {
-	// slack
-	slack := notification.Init()
-	go slack.HandleChannelSystemLogs()
-
-	// tri
-	tri := tri.Init()
-	tri.SetSlack(slack)
-	tri.PrintAllSymbols()
-	tri.PrintAllCombinations()
-
-	// ordrebookRunner
-	orderbookRunner := runner.Init(tri)
-	orderbookRunner.CalculateTriArb = false
-	orderbookRunner.SetSlack(slack)
-	go orderbookRunner.ListenAll()
-
-	// bybit
-	bybit := bybit.Init()
-	bybit.SetTri(tri)
-	bybit.SetOrderbookRunner(orderbookRunner)
-	bybit.SetSlack(slack)
-	go bybit.HandlePrivateChannel()
-	go bybit.HandlePublicChannel() // block
-
-	// Check if symbols are ready
-	var allSymbols []string
-	for symbol, _ := range tri.SymbolOrdersMap {
-		allSymbols = append(allSymbols, symbol)
+// resp:
+//
+//	{
+//		"retCode":0,
+//		"retMsg":"OK",
+//		"result":{
+//			"category":"spot",
+//			"list":[
+//				{
+//					"symbol":"BTCUSDT",
+//					"baseCoin":"BTC",
+//					"quoteCoin":"USDT",
+//					"innovation":"0",
+//					"status":"Trading",
+//					"marginTrading":"both",
+//					"lotSizeFilter":{
+//						"basePrecision":"0.000001",
+//						"quotePrecision":"0.00000001",
+//						"minOrderQty":"0.000048",
+//						"maxOrderQty":"200",
+//						"minOrderAmt":"1",
+//						"maxOrderAmt":"2000000"
+//					},
+//					"priceFilter":{
+//						"tickSize":"0.01"
+//					}
+//				},
+//				{
+//					..
+//				}
+//			]
+//		}
+//	}
+func allSymbols() {
+	url := "https://api.bybit.com/v5/market/instruments-info?category=spot" // Replace with the actual endpoint
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatal(err)
 	}
-	log.Println("all symbols:", allSymbols)
-	for {
-		if tri.SymbolOrdersMap[allSymbols[0]].Ready() && tri.SymbolOrdersMap[allSymbols[1]].Ready() && tri.SymbolOrdersMap[allSymbols[2]].Ready() {
-			break
-		}
-		log.Printf("Not ready, waiting for new prices: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
-		time.Sleep(100 * time.Millisecond)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
 	}
-	log.Printf("Ready! new prices received: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
-	combination := tri.SymbolCombinationsMap[allSymbols[0]][0] // For testing, just get the first combination
-	log.Printf("Will use this combination: %s -> %s -> %s\n", combination.SymbolOrders[0].Symbol, combination.SymbolOrders[1].Symbol, combination.SymbolOrders[2].Symbol)
 
-	// Tri trade
-	// api := bybit.InitApi()
-	// resp, err := api.PlaceOrder(side, "BTCUSDT", qty)
-	// if err != nil {
-	// log.Println("err:", err)
-	// return
-	// }
-
-	select {}
+	type Resp struct {
+		RetCode int    `json:"ret_code"`
+		RetMsg  string `json:"retMsg"`
+		Result  struct {
+			Category string `json:"category"`
+			List     []struct {
+				Symbol string `json:"symbol"`
+			} `json:"list"`
+		} `json:"result"`
+	}
+	res := Resp{}
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("category:", res.Result.Category)
+	var syms []string
+	for _, sym := range res.Result.List {
+		syms = append(syms, sym.Symbol)
+	}
+	fmt.Println(syms)
 }

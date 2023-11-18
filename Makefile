@@ -18,5 +18,7 @@ instrument:
 	go run manual_tests/order.go --action="instrument" --sym=$(sym)
 all_instruments:
 	go run manual_tests/order.go --action="all_instruments"
+all_symbols:
+	go run manual_tests/order.go --action="all_symbols"
 trii:
 	go run manual_tests/order.go --action="trii"
