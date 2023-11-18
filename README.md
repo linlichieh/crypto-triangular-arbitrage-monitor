@@ -72,9 +72,9 @@ Get Instruments Info
 
     make instrument sym=BTCUSDT
 
-Get Instruments Info
+Generate instruments file
 
-    make all_instruments
+    make generate_instruments
 
 Test tri trade
 

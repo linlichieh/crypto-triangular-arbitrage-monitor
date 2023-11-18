@@ -25,6 +25,7 @@ func main() {
 	log.Println("DEBUG_PRINT_MOST_PROFIT:", viper.GetBool("DEBUG_PRINT_MOST_PROFIT"))
 
 	tri := tri.Init()
+	tri.Build()
 	tri.SetSlack(slack)
 	tri.PrintAllSymbols()
 	// tri.printAllCombinations()

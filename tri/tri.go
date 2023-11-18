@@ -17,8 +17,10 @@ type Price []string
 type Tri struct {
 	SymbolOrdersMap       map[string]*SymbolOrder // to store bid and ask price for each symbol
 	SymbolCombinationsMap map[string][]*Combination
+	SymbolInstrumentMap   map[string]*Instrument
 	Slack                 *notification.Slack
 	OrderbookTopics       map[string]string
+	ConfigPath            string
 }
 
 // Combination is a paris of 3 symbols
@@ -40,21 +42,36 @@ type Order struct {
 	Size  decimal.Decimal
 }
 
+type Instrument struct {
+	BasePrecision  string `json:"base_precision"`
+	QuotePrecision string `json:"quote_precision"`
+}
+
 func Init() *Tri {
-	tri := &Tri{
+	return &Tri{
 		SymbolOrdersMap:       make(map[string]*SymbolOrder),
 		SymbolCombinationsMap: make(map[string][]*Combination),
+		SymbolInstrumentMap:   make(map[string]*Instrument),
 		OrderbookTopics:       make(map[string]string),
+		ConfigPath:            "symbol_combinations.json",
 	}
-	tri.buildSymbolCombinations()
-	return tri
+}
+
+func (tri *Tri) Build() {
+	tri.BuildSymbolCombinations()
+	tri.BuildInstruments()
+	tri.VerifyInstruments()
 }
 
 func (tri *Tri) SetSlack(slack *notification.Slack) {
 	tri.Slack = slack
 }
 
-func (tri *Tri) buildSymbolCombinations() {
+func (tri *Tri) SetConfigPath(path string) {
+	tri.ConfigPath = path
+}
+
+func (tri *Tri) BuildSymbolCombinations() {
 	data := tri.loadSymbolsJson()
 
 	// Load orderbook topics
@@ -90,7 +107,7 @@ func (tri *Tri) buildSymbolCombinations() {
 }
 
 func (tri *Tri) loadSymbolsJson() map[string]interface{} {
-	body, err := os.ReadFile("symbol_combinations.json")
+	body, err := os.ReadFile(tri.ConfigPath)
 	if err != nil {
 		log.Fatalf("Error reading JSON file: %v", err)
 	}
@@ -100,6 +117,25 @@ func (tri *Tri) loadSymbolsJson() map[string]interface{} {
 		log.Fatalf("Error unmarshaling JSON: %v", err)
 	}
 	return data
+}
+
+func (tri *Tri) BuildInstruments() {
+	body, err := os.ReadFile("symbol_instruments.json")
+	if err != nil {
+		log.Fatalf("Error reading JSON file: %v", err)
+	}
+	err = json.Unmarshal(body, &tri.SymbolInstrumentMap)
+	if err != nil {
+		log.Fatalf("Error unmarshaling JSON: %v", err)
+	}
+}
+
+func (tri *Tri) VerifyInstruments() {
+	for symbol := range tri.SymbolOrdersMap {
+		if _, ok := tri.SymbolInstrumentMap[symbol]; !ok {
+			log.Fatalf("'%s' is missed in instruments file", symbol)
+		}
+	}
 }
 
 func (tri *Tri) UpdatePrice(action string, sym string, price Price, seq int64) error {

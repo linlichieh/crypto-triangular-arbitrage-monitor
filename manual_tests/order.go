@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -40,9 +41,9 @@ func main() {
 	case "instrument":
 		loadEnvConfig("prod-config")
 		instrument(*sym)
-	case "all_instruments":
+	case "generate_instruments":
 		loadEnvConfig("prod-config")
-		allInstruments()
+		generateInstruments()
 	case "all_symbols":
 		allSymbols()
 	default:
@@ -161,48 +162,52 @@ func instrument(sym string) {
 }
 
 // TESTNET doesn't have MNTBTC, use prod bybit host
-func allInstruments() {
-	list := []string{
-		"BTCUSDT",
-		"ETHUSDT",
-		"ETHBTC",
-		"WBTCUSDT",
-		"WBTCBTC",
-		"SOLUSDT",
-		"SOLBTC",
-		"XRPBTC",
-		"XRPUSDT",
-		"XLMBTC",
-		"XLMUSDT",
-		"ALGOBTC",
-		"ALGOUSDT",
-		"MANABTC",
-		"MANAUSDT",
-		"MATICBTC",
-		"MATICUSDT",
-		"LTCBTC",
-		"LTCUSDT",
-		"DOTBTC",
-		"DOTUSDT",
-		"SANDBTC",
-		"SANDUSDT",
-		"MNTBTC",
-		"MNTUSDT",
+func generateInstruments() {
+	tri := tri.Init()
+	tri.SetConfigPath("prod-symbol_combinations.json")
+	tri.BuildSymbolCombinations()
+	var allSymbols []string
+	for symbol, _ := range tri.SymbolOrdersMap {
+		allSymbols = append(allSymbols, symbol)
 	}
 	api := bybit.InitApi()
-	// result := map[string]map[string]string{}
-	for _, sym := range list {
+	result := map[string]map[string]string{}
+	for _, sym := range allSymbols {
 		resp, err := api.GetInstrumentsInfo(sym)
 		if err != nil {
 			log.Println("err:", err)
 			return
 		}
 		if len(resp.Result.List) > 0 {
-			log.Printf("symbol: %s  basePre: %s  quotePre: %s\n", sym, resp.Result.List[0].LotSizeFilter.BasePrecision, resp.Result.List[0].LotSizeFilter.QuotePrecision)
+			m := map[string]string{}
+			m["base_precision"] = resp.Result.List[0].LotSizeFilter.BasePrecision
+			m["quote_precision"] = resp.Result.List[0].LotSizeFilter.QuotePrecision
+			result[sym] = m
 		} else {
 			log.Printf("symbol: %s  no list", sym)
 		}
 	}
+
+	// Write json into file
+	// Create or open the file
+	file, err := os.Create("symbol_instruments.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Write the JSON data to the file
+	_, err = file.Write(jsonData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result)
+	fmt.Println("'symbol_instruments.json' has been created")
 }
 
 // resp:
