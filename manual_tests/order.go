@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 )
 
@@ -69,7 +68,10 @@ func loadEnvConfig(config string) {
 }
 
 func placeOrder(side string, qty string) {
+	tri := tri.Init()
+	tri.Build()
 	api := bybit.InitApi()
+	api.SetTri(tri)
 	resp, err := api.PlaceOrder(side, "BTCUSDT", qty)
 	if err != nil {
 		log.Println("err:", err)
@@ -144,21 +146,6 @@ func instrument(sym string) {
 	} else {
 		log.Printf("symbol: %s  no list", sym)
 	}
-
-	// Example quantity
-	quantity := 123.123456789
-
-	// Convert float64 to decimal.Decimal
-	decimalQuantity := decimal.NewFromFloat(quantity)
-
-	// Define the precision as the number of decimal places
-	precision, _ := bybit.PrecisionConverter("0.00001")
-
-	// Format the quantity with the desired precision
-	formattedQuantity := decimalQuantity.Round(int32(precision))
-
-	// Print the formatted quantity
-	fmt.Println(quantity, formattedQuantity.String())
 }
 
 // TESTNET doesn't have MNTBTC, use prod bybit host
