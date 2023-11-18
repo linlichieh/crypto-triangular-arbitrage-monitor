@@ -12,11 +12,12 @@ const (
 )
 
 type Trade struct {
-	BeforeTradeBalance decimal.Decimal
-	AfterTradeBalance  decimal.Decimal
-	ActualQty          decimal.Decimal
+	Balance decimal.Decimal      // USDT
+	Qty     chan decimal.Decimal // When ws private channel receives updates, will send a notification to here
 }
 
 func Init() *Trade {
-	return &Trade{}
+	return &Trade{
+		Qty: make(chan decimal.Decimal),
+	}
 }

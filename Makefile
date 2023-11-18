@@ -21,4 +21,4 @@ generate_instruments:
 all_symbols:
 	go run manual_tests/order.go --action="all_symbols"
 trii:
-	go run manual_tests/order.go --action="trii"
+	go run manual_tests/order.go --action="trii" --qty=$(qty)

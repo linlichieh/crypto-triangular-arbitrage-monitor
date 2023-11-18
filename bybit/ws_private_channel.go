@@ -23,32 +23,27 @@ type OrderSpotData struct {
 	Type     string `json:"orderType"`
 }
 
-// TODO not implemented yet
-type ExecutionSpotData struct{}
-
-// TODO not implemented yet
 type WalletDataData struct {
 	Coins []Coin `json:"coin"`
 }
-
 type Coin struct {
 	Coin    string `json:"coin"`
 	Balance string `json:"walletBalance"`
 }
 
-func (b *Bybit) HandlePrivateChannel() {
+func (ws *Ws) HandlePrivateChannel() {
 	topics := []string{"order.spot", "execution.spot", "wallet"} // "order.spot", "execution.spot", "wallet"
 
 	for {
-		if err := b.listenPrivateChannel(topics); err != nil {
-			b.Slack.SystemLogs(fmt.Sprintf("Private channel connection, error: %v", err))
+		if err := ws.listenPrivateChannel(topics); err != nil {
+			ws.Slack.SystemLogs(fmt.Sprintf("Private channel connection, error: %v", err))
 		}
-		b.Slack.SystemLogs("Private channel connection reconnecting...")
+		ws.Slack.SystemLogs("Private channel connection reconnecting...")
 		time.Sleep(3 * time.Second)
 	}
 }
 
-func (b *Bybit) listenPrivateChannel(topics []string) error {
+func (ws *Ws) listenPrivateChannel(topics []string) error {
 	var err error
 	conn, _, err := websocket.DefaultDialer.Dial(viper.GetString("BYBIT_PRIVATE_WS"), nil)
 	if err != nil {
@@ -58,7 +53,7 @@ func (b *Bybit) listenPrivateChannel(topics []string) error {
 
 	// Auth message
 	expires := strconv.FormatInt(time.Now().Unix()*1000+1000, 10)
-	signature := b.generateSignature(expires)
+	signature := ws.generateSignature(expires)
 	req := MessageReq{
 		Op:   "auth",
 		Args: []string{viper.GetString("BYBIT_API_KEY"), expires, signature},
@@ -72,21 +67,21 @@ func (b *Bybit) listenPrivateChannel(topics []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read auth message, err: %v", err)
 	}
-	proceed, err := b.handleOpResp(message)
+	proceed, err := ws.handleOpResp(message)
 	if err != nil {
 		return err
 	}
 	if !proceed {
 		return nil
 	}
-	b.Slack.SystemLogs("auth succeed!")
+	ws.Slack.SystemLogs("auth succeed!")
 
 	// Subscribe order status, wallet, etc.
 	if err = conn.WriteJSON(MessageReq{Op: "subscribe", Args: topics}); err != nil {
 		return fmt.Errorf("failed to send op, args: %v, err: %v", topics, err)
 	}
 
-	// In order to prevent `conn.ReadMessage()` from blocking if there is no update pushed from bybit and ping won't be
+	// In order to prevent `conn.ReadMessage()` from blocking if there is no update pushed from Bybit and ping won't be
 	// executed due to this reason, it needed to be run in another goroutine
 	msgChan := make(chan []byte)
 	errChan := make(chan error)
@@ -111,10 +106,10 @@ func (b *Bybit) listenPrivateChannel(topics []string) error {
 				return fmt.Errorf("failed to send op, err: %v", err)
 			}
 		case message := <-msgChan:
-			if b.DebugPrintMessage {
+			if ws.DebugPrintMessage {
 				log.Println("private:", string(message))
 			}
-			err = b.handleResponse(message)
+			err = ws.handleResponse(message)
 			if err != nil {
 				return fmt.Errorf("failed to parse private message during running, err: %v", err)
 			}
@@ -124,7 +119,7 @@ func (b *Bybit) listenPrivateChannel(topics []string) error {
 	}
 }
 
-func (b *Bybit) generateSignature(expires string) string {
+func (ws *Ws) generateSignature(expires string) string {
 	apiSecret := viper.GetString("BYBIT_API_SECRET")
 
 	// Create a new HMAC by defining the hash type and the key (as byte array)

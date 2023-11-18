@@ -173,7 +173,7 @@ func (tri *Tri) PrintAllSymbols() {
 	for symbol := range tri.SymbolOrdersMap {
 		symbols = append(symbols, symbol)
 	}
-	tri.Slack.SystemLogs(fmt.Sprintf("Symbols: %v", symbols))
+	tri.Slack.SystemLogs(fmt.Sprintf("SymbolOrdersMap: %v", symbols))
 }
 
 func (tri *Tri) PrintAllCombinations() {

@@ -78,7 +78,7 @@ Generate instruments file
 
 Test tri trade
 
-    make trii
+    make trii qty=10
 
 All symbols
 

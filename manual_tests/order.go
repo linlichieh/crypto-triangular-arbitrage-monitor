@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 )
 
@@ -36,7 +37,7 @@ func main() {
 		placeOrder(*action, *qty)
 	case "trii":
 		loadEnvConfig("")
-		trii()
+		trii(*qty)
 	case "instrument":
 		loadEnvConfig("prod-config")
 		instrument(*sym)
@@ -72,7 +73,11 @@ func placeOrder(side string, qty string) {
 	tri.Build()
 	api := bybit.InitApi()
 	api.SetTri(tri)
-	resp, err := api.PlaceOrder(side, "BTCUSDT", qty)
+	decimalQty, err := decimal.NewFromString(qty)
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp, err := api.PlaceOrder(side, "BTCUSDT", decimalQty)
 	if err != nil {
 		log.Println("err:", err)
 		return
@@ -80,13 +85,14 @@ func placeOrder(side string, qty string) {
 	log.Println(resp)
 }
 
-func trii() {
+func trii(qty string) {
 	// slack
 	slack := notification.Init()
 	go slack.HandleChannelSystemLogs()
 
 	// tri
 	tri := tri.Init()
+	tri.Build()
 	tri.SetSlack(slack)
 	tri.PrintAllSymbols()
 	tri.PrintAllCombinations()
@@ -97,13 +103,16 @@ func trii() {
 	orderbookRunner.SetSlack(slack)
 	go orderbookRunner.ListenAll()
 
+	triTrade := trade.Init()
+
 	// bybit
-	bybit := bybit.Init()
-	bybit.SetTri(tri)
-	bybit.SetOrderbookRunner(orderbookRunner)
-	bybit.SetSlack(slack)
-	go bybit.HandlePrivateChannel()
-	go bybit.HandlePublicChannel() // block
+	ws := bybit.InitWs()
+	ws.SetTri(tri)
+	ws.SetTrade(triTrade)
+	ws.SetOrderbookRunner(orderbookRunner)
+	ws.SetSlack(slack)
+	go ws.HandlePrivateChannel()
+	go ws.HandlePublicChannel() // block
 
 	// Check if symbols are ready
 	var allSymbols []string
@@ -123,12 +132,45 @@ func trii() {
 	log.Printf("Will use this combination: %s -> %s -> %s\n", combination.SymbolOrders[0].Symbol, combination.SymbolOrders[1].Symbol, combination.SymbolOrders[2].Symbol)
 
 	// Tri trade
-	// api := bybit.InitApi()
-	// resp, err := api.PlaceOrder(side, "BTCUSDT", qty)
-	// if err != nil {
-	// log.Println("err:", err)
-	// return
-	// }
+	api := bybit.InitApi()
+	api.SetTri(tri)
+
+	decimalQty, err := decimal.NewFromString(qty)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 1st trade
+	resp, err := api.PlaceOrder(trade.SIDE_BUY, combination.SymbolOrders[0].Symbol, decimalQty)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("1st %s resp %+v\n", combination.SymbolOrders[0].Symbol, resp)
+	tradeQty := <-triTrade.Qty
+	log.Println("1st qty:", tradeQty)
+
+	// 2nd trade
+	// TODO quantity might not be correct
+	if combination.BaseQuote {
+		resp, err = api.PlaceOrder(trade.SIDE_SELL, combination.SymbolOrders[1].Symbol, tradeQty)
+	} else {
+		resp, err = api.PlaceOrder(trade.SIDE_BUY, combination.SymbolOrders[1].Symbol, tradeQty)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("2nd %s resp %+v\n", combination.SymbolOrders[1].Symbol, resp)
+	tradeQty = <-triTrade.Qty
+	log.Println("2nd qty:", tradeQty)
+
+	// 3rd trade
+	resp, err = api.PlaceOrder(trade.SIDE_SELL, combination.SymbolOrders[2].Symbol, tradeQty)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("3rd %s resp %+v\n", combination.SymbolOrders[2].Symbol, resp)
+	tradeQty = <-triTrade.Qty
+	log.Println("3rd qty:", tradeQty)
 
 	select {}
 }
@@ -142,7 +184,7 @@ func instrument(sym string) {
 		return
 	}
 	if len(resp.Result.List) > 0 {
-		log.Printf("symbol: %s  basePre: %s  quotePre: %s\n", sym, resp.Result.List[0].LotSizeFilter.BasePrecision, resp.Result.List[0].LotSizeFilter.QuotePrecision)
+		log.Printf("symbol: %s  InstrumentResp: %+v\n", sym, resp)
 	} else {
 		log.Printf("symbol: %s  no list", sym)
 	}

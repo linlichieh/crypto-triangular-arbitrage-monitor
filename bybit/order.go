@@ -68,6 +68,10 @@ type InstrumentResp struct {
 			LotSizeFilter struct {
 				BasePrecision  string `json:"basePrecision"`
 				QuotePrecision string `json:"quotePrecision"`
+				MinOrderQty    string `json:"minOrderQty"`
+				MaxOrderQty    string `json:"maxOrderQty"`
+				MinOrderAmt    string `json:"minOrderAmt"`
+				MaxOrderAmt    string `json:"maxOrderAmt"`
 			} `json:"lotSizeFilter"`
 		} `json:"list"`
 	} `json:"result"`
@@ -107,26 +111,20 @@ func (api *Api) SetTri(tri *tri.Tri) {
 //			"retExtInfo": {},
 //			"time": 1699717992439
 //	}
-func (api *Api) PlaceOrder(side string, symbol string, qty string) (resp map[string]any, err error) {
+func (api *Api) PlaceOrder(side string, symbol string, qty decimal.Decimal) (resp map[string]any, err error) {
 	if side != trade.SIDE_BUY && side != trade.SIDE_SELL {
 		err = errors.New(side + " not supported")
 		return
 	}
 
-	// qty
-	decimalQty, err := decimal.NewFromString(qty)
-	if err != nil {
-		return
-	}
-
 	// Format qty with precision (bybit's limit)
 	instrument := api.Tri.SymbolInstrumentMap[symbol]
-	var newQty decimal.Decimal
+	var precisionQty decimal.Decimal
 	switch side {
 	case trade.SIDE_BUY:
-		newQty, err = qtyWithPrecision(decimalQty, instrument.QuotePrecision)
+		precisionQty, err = qtyWithPrecision(qty, instrument.QuotePrecision)
 	case trade.SIDE_SELL:
-		newQty, err = qtyWithPrecision(decimalQty, instrument.BasePrecision)
+		precisionQty, err = qtyWithPrecision(qty, instrument.BasePrecision)
 	}
 	if err != nil {
 		return
@@ -136,7 +134,7 @@ func (api *Api) PlaceOrder(side string, symbol string, qty string) (resp map[str
 		"symbol":    symbol,
 		"orderType": trade.ORDER_TYPE_MARKET,
 		"side":      side,
-		"qty":       newQty.String(),
+		"qty":       precisionQty.String(),
 	}
 	body, err := api.post(ORDER_ENDPOINT, params)
 	if err != nil {

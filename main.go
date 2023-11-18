@@ -38,13 +38,13 @@ func main() {
 	tra := trade.Init()
 
 	// Have to be after initTri as it will set klines
-	bybit := bybit.Init()
-	bybit.SetTrade(tra)
-	bybit.SetTri(tri)
-	bybit.SetOrderbookRunner(orderbookRunner)
-	bybit.SetSlack(slack)
-	go bybit.HandlePrivateChannel() // block
-	bybit.HandlePublicChannel()     // block
+	ws := bybit.InitWs()
+	ws.SetTrade(tra)
+	ws.SetTri(tri)
+	ws.SetOrderbookRunner(orderbookRunner)
+	ws.SetSlack(slack)
+	go ws.HandlePrivateChannel() // block
+	ws.HandlePublicChannel()     // block
 }
 
 func loadEnvConfig() {
