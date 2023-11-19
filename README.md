@@ -185,6 +185,41 @@ e.g.
     1  ETHBTC  bid price: 0.055166, bid size: 0.388, ask price: 0.055182, ask size: 0.342
     2  BTCUSDT  bid price: 37069.38, bid size: 0.050048, ask price: 37069.39, ask size: 6.355316
 
+# Further explaination for terms in Bybit API
+
+### symbol instrument - minOrderQty vs maxOrderQty vs minOrderAmt vs maxOrderAmt
+
+minOrderQty and maxOrderQty deal with the quantity of the base currency in a trade, while minOrderAmt and maxOrderAmt refer to the total value of the trade in terms of the quote currency
+
+For example: `BTCUSDT` instrument (`BTC` is base currency and `USDT` is quote currency):
+
+    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:BTCUSDT BaseCoin:BTC QuoteCoin:USDT Status:Trading LotSizeFilter:{BasePrecision:0.000001 QuotePrecision:0.00000001 MinOrderQty:0.000048 MaxOrderQty:71.73956243 MinOrderAmt:1 MaxOrderAmt:2000000}}]} RetExtInfo:map[] Time:1700407186100}
+
+Test cases:
+
+* Use `0.9` USDT to buy BTC: fail, `Order value exceeded lower limit`
+* Use `1` USDT to buy BTC: success
+* Sell `0.000047` BTC: fail, `Order quantity exceeded lower limit`
+* Sell `0.000048` BTC: success
+
+For example: `ETHBTC` instrument (`ETH` is base currency and `BTC` is quote currency):
+
+    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:ETHBTC BaseCoin:ETH QuoteCoin:BTC Status:Trading LotSizeFilter:{BasePrecision:0.001 QuotePrecision:0.000000001 MinOrderQty:0.003 MaxOrderQty:271.90273271 MinOrderAmt:0.0002 MaxOrderAmt:13.91}}]} RetExtInfo:map[] Time:1700407813998}
+
+Test cases:
+
+* `0.0001` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
+* `0.0002` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
+* `0.0003` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
+* `0.0004` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
+* `0.002` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
+* `0.003` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
+* `0.004` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
+* `0.006` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
+
+> Make no sense, is it bug?
+
+
 # Troubleshooting
 
 ### `Order value exceeded lower limit.`
