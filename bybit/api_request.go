@@ -76,7 +76,7 @@ func (api *Api) get(endpoint string, params map[string]string) (body []byte, err
 
 	// signature
 	hmac256 := hmac.New(sha256.New, []byte(viper.GetString("BYBIT_API_SECRET")))
-	_, err = hmac256.Write([]byte(strconv.FormatInt(ts, 10) + viper.GetString("BYBIT_API_KEY") + RECV_WINDOW_MILLISECOND))
+	_, err = hmac256.Write([]byte(strconv.FormatInt(ts, 10) + viper.GetString("BYBIT_API_KEY") + RECV_WINDOW_MILLISECOND + query.Encode()))
 	if err != nil {
 		return
 	}
