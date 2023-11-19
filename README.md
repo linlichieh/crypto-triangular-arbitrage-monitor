@@ -193,7 +193,7 @@ minOrderQty and maxOrderQty deal with the quantity of the base currency in a tra
 
 For example: `BTCUSDT` instrument (`BTC` is base currency and `USDT` is quote currency):
 
-    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:BTCUSDT BaseCoin:BTC QuoteCoin:USDT Status:Trading LotSizeFilter:{BasePrecision:0.000001 QuotePrecision:0.00000001 MinOrderQty:0.000048 MaxOrderQty:71.73956243 MinOrderAmt:1 MaxOrderAmt:2000000}}]} RetExtInfo:map[] Time:1700407186100}
+    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:BTCUSDT BaseCoin:BTC QuoteCoin:USDT Status:Trading LotSizeFilter:{BasePrecision:0.000001 QuotePrecision:0.00000001 MinOrderQty:0.000048 MaxOrderQty:200 MinOrderAmt:1 MaxOrderAmt:2000000}}]} RetExtInfo:map[] Time:1700408846020}
 
 Test cases:
 
@@ -204,21 +204,28 @@ Test cases:
 
 For example: `ETHBTC` instrument (`ETH` is base currency and `BTC` is quote currency):
 
-    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:ETHBTC BaseCoin:ETH QuoteCoin:BTC Status:Trading LotSizeFilter:{BasePrecision:0.001 QuotePrecision:0.000000001 MinOrderQty:0.003 MaxOrderQty:271.90273271 MinOrderAmt:0.0002 MaxOrderAmt:13.91}}]} RetExtInfo:map[] Time:1700407813998}
+    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:ETHBTC BaseCoin:ETH QuoteCoin:BTC Status:Trading LotSizeFilter:{BasePrecision:0.001 QuotePrecision:0.000000001 MinOrderQty:0.01 MaxOrderQty:1000 MinOrderAmt:0.01 MaxOrderAmt:1}}]} RetExtInfo:map[] Time:1700408896992}
 
 Test cases:
 
-* `0.0001` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
-* `0.0002` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
-* `0.0003` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
-* `0.0004` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
-* `0.002` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
-* `0.003` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
-* `0.004` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
-* `0.006` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
+* `0.009` BTC -> ETH: fail, `170140 Order value exceeded lower limit`
+* `0.01` BTC -> ETH: success
+* `0.02` BTC -> ETH: success
+* `0.009` ETH -> BTC: fail, `170136 Order quantity exceeded lower limit`
+* `0.01` ETH -> BTC: success
+* `0.02` ETH -> BTC: success
 
 > Make no sense, is it bug?
 
+NOTE: The instrument in TESTNET and MAINNET can be different such as `ETHBUC`
+
+in TESTNET
+
+    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:ETHBTC BaseCoin:ETH QuoteCoin:BTC Status:Trading LotSizeFilter:{BasePrecision:0.001 QuotePrecision:0.000000001 MinOrderQty:0.01 MaxOrderQty:1000 MinOrderAmt:0.01 MaxOrderAmt:1}}]} RetExtInfo:map[] Time:1700408896992}
+
+in MAINNET
+
+    &{RetCode:0 RetMsg:OK Result:{Category:spot List:[{Symbol:ETHBTC BaseCoin:ETH QuoteCoin:BTC Status:Trading LotSizeFilter:{BasePrecision:0.001 QuotePrecision:0.000000001 MinOrderQty:0.003 MaxOrderQty:271.90273271 MinOrderAmt:0.0002 MaxOrderAmt:13.91}}]} RetExtInfo:map[] Time:1700407813998}
 
 # Troubleshooting
 
@@ -271,6 +278,8 @@ Bybit's response is not very consistent. I think the only reliable way is `order
 
 # TODO
 
+* Add minimum threshold check for symbols and Ask Bis size before making tri-trade
+* Generate instrument for dev and prod separately (because the setting are different e.g. ETHBTC)
 * topic `oder.spot` might not notify order status due to unknown reason
     * use order history endpoint to chceck
 * graceful shutdown
