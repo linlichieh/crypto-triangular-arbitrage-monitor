@@ -11,9 +11,9 @@ run:
 	go build
 	./crypto-triangular-arbitrage-watch
 buy:
-	go run manual_tests/order.go --action="Buy" --qty=$(qty)
+	go run manual_tests/order.go --action="Buy" --qty=$(qty) --sym=$(sym)
 sell:
-	go run manual_tests/order.go --action="Sell" --qty=$(qty)
+	go run manual_tests/order.go --action="Sell" --qty=$(qty) --sym=$(sym)
 instrument:
 	go run manual_tests/order.go --action="instrument" --sym=$(sym)
 generate_instruments:

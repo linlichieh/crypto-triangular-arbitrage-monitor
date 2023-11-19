@@ -31,10 +31,14 @@ func main() {
 	// Parse the flags.
 	flag.Parse()
 
+	if *sym == "" {
+		*sym = "BTCUSDT"
+	}
+
 	switch *action {
 	case trade.SIDE_BUY, trade.SIDE_SELL:
 		loadEnvConfig("")
-		placeOrder(*action, *qty)
+		placeOrder(*action, *sym, *qty)
 	case "trii":
 		loadEnvConfig("")
 		trii(*qty)
@@ -68,7 +72,7 @@ func loadEnvConfig(config string) {
 	fmt.Printf("ENV: %s\n", viper.GetString("ENV"))
 }
 
-func placeOrder(side string, qty string) {
+func placeOrder(side string, sym string, qty string) {
 	tri := tri.Init()
 	tri.Build()
 	api := bybit.InitApi()
@@ -77,7 +81,7 @@ func placeOrder(side string, qty string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	resp, err := api.PlaceOrder(side, "BTCUSDT", decimalQty)
+	resp, err := api.PlaceOrder(side, sym, decimalQty)
 	if err != nil {
 		log.Println("err:", err)
 		return
@@ -128,7 +132,7 @@ func trii(qty string) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	log.Printf("Ready! new prices received: %v %v %v\n", tri.SymbolOrdersMap[allSymbols[0]], tri.SymbolOrdersMap[allSymbols[1]], tri.SymbolOrdersMap[allSymbols[2]])
-	combination := tri.SymbolCombinationsMap[allSymbols[0]][0] // For testing, just get the first combination
+	combination := tri.SymbolCombinationsMap[allSymbols[0]][1] // For testing, just get the first combination
 	log.Printf("Will use this combination: %s -> %s -> %s\n", combination.SymbolOrders[0].Symbol, combination.SymbolOrders[1].Symbol, combination.SymbolOrders[2].Symbol)
 
 	// Tri trade
@@ -141,6 +145,8 @@ func trii(qty string) {
 	}
 
 	// 1st trade
+	// This error `Order value exceeded lower limit.` means that the total value is below the minimum threshold
+	// Solution is putting more money
 	resp, err := api.PlaceOrder(trade.SIDE_BUY, combination.SymbolOrders[0].Symbol, decimalQty)
 	if err != nil {
 		log.Fatal(err)
@@ -150,10 +156,11 @@ func trii(qty string) {
 	log.Println("1st qty:", tradeQty)
 
 	// 2nd trade
-	// TODO quantity might not be correct
 	if combination.BaseQuote {
+		fmt.Println("2nd sell")
 		resp, err = api.PlaceOrder(trade.SIDE_SELL, combination.SymbolOrders[1].Symbol, tradeQty)
 	} else {
+		fmt.Println("2nd buy")
 		resp, err = api.PlaceOrder(trade.SIDE_BUY, combination.SymbolOrders[1].Symbol, tradeQty)
 	}
 	if err != nil {
@@ -171,8 +178,9 @@ func trii(qty string) {
 	log.Printf("3rd %s resp %+v\n", combination.SymbolOrders[2].Symbol, resp)
 	tradeQty = <-triTrade.Qty
 	log.Println("3rd qty:", tradeQty)
+	log.Printf("Done! %s -> %s", decimalQty.String(), tradeQty.String())
 
-	select {}
+	// TODO some issues with ETHUSDT -> ETHBTC -> BTCUSDT
 }
 
 // TESTNET doesn't have MNTBTC, use prod bybit host
