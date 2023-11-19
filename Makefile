@@ -11,11 +11,17 @@ run:
 	go build
 	./crypto-triangular-arbitrage-watch
 buy:
-	go run manual_tests/order.go --action="Buy" --qty=$(qty) --sym=$(sym)
+	@$(if $(sym),\
+		go run manual_tests/order.go --action="Buy" --qty=$(qty) --sym=$(sym),\
+		go run manual_tests/order.go --action="Buy" --qty=$(qty))
 sell:
-	go run manual_tests/order.go --action="Sell" --qty=$(qty) --sym=$(sym)
+	@$(if $(sym),\
+		go run manual_tests/order.go --action="Sell" --qty=$(qty) --sym=$(sym),\
+		go run manual_tests/order.go --action="Sell" --qty=$(qty))
 instrument:
-	go run manual_tests/order.go --action="instrument" --sym=$(sym)
+	@$(if $(sym),\
+		go run manual_tests/order.go --action="instrument" --sym=$(sym),\
+		go run manual_tests/order.go --action="instrument")
 generate_instruments:
 	go run manual_tests/order.go --action="generate_instruments"
 all_symbols:
@@ -23,5 +29,7 @@ all_symbols:
 trii:
 	go run manual_tests/order.go --action="trii" --qty=$(qty)
 order_history:
-	go run manual_tests/order.go --action="order_history"
+	@$(if $(limit),\
+        go run manual_tests/order.go --action="order_history" --limit=$(limit),\
+        go run manual_tests/order.go --action="order_history")
 

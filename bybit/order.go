@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -165,9 +166,10 @@ func (api *Api) GetInstrumentsInfo(symbol string) (resp *InstrumentResp, err err
 	return
 }
 
-func (api *Api) GetOrderHistory() (resp []byte, err error) {
+func (api *Api) GetOrderHistory(limit int) (resp []byte, err error) {
 	params := map[string]string{
 		"category": trade.CATEGORY_SPOT,
+		"limit":    strconv.Itoa(limit),
 	}
 	resp, err = api.get(ORDER_HISTORY_ENDPOINT, params)
 	return

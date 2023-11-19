@@ -136,7 +136,8 @@ func (ws *Ws) handleTopicResp(message []byte) error {
 			}
 			for _, data := range list {
 				ws.Slack.SystemLogs(fmt.Sprintf("order.spot: %+v", data))
-				if data.Status == "PartiallyFilledCanceled" || data.Status == "Filled" {
+				switch data.Status {
+				case "PartiallyFilledCanceled", "Filled":
 					var actualQty decimal.Decimal
 					switch data.Side {
 					case trade.SIDE_BUY:
@@ -162,6 +163,10 @@ func (ws *Ws) handleTopicResp(message []byte) error {
 					}
 					ws.Slack.SystemLogs(fmt.Sprintf("actualQty: %s", actualQty.String()))
 					ws.Trade.Qty <- actualQty
+				case "Cancelled":
+					log.Println("Cancelled", data)
+					// TODO
+					// ws.Trade.Retry <- 1
 				}
 			}
 		case topicResp.Topic == "wallet":

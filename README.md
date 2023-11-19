@@ -65,17 +65,18 @@ Run (optional, it's just for receiving order status)
 
 Buy BTC with $10 USDT
 
-    make buy qty=10
-    make buy qty=10 sym=BTCUSDT
+    make buy qty=10                         // default is BTCUSDT
+    make buy qty=10 sym=ETHUSDT
 
 Sell BTC with qty=0.000294
 
-    make sell qty=0.000294
-    make sell qty=0.000294 sym=BTCUSDT
+    make sell qty=0.000294                  // default is BTCUSDT
+    make sell qty=0.000294 sym=ETHUSDT
 
 Get Instruments Info
 
-    make instrument sym=BTCUSDT
+    maek instrument                         // default is BTCUSDT
+    make instrument sym=ETHUSDT
 
 Generate instruments file
 
@@ -92,6 +93,7 @@ All symbols
 Get order history
 
     make order_history
+    make order_history limit=3
 
 # Bybit API response
 
@@ -222,22 +224,20 @@ order status
 
 Reason:
 
-the quantity in the last order of Ask 522 ETH, it seems to cause the huge slippery issue to bybit,
-so bybit doesn't allow this order,
-I guess the internal logic is turning my Market into the limit and add it to the last Ask
+Don't know, it's really weird. Successful order can also get it
 
-Solution:
+    "orderStatus":"PartiallyFilledCanceled",
+    "rejectReason":"EC_ReachRiskPriceLimit",
 
-Use LIMIT order to avoid this situation. For sell order, set the price as the first price in the Bid
+Solution: Try it after a while
 
-Or retry until it works
-
+Bybit's response is not very consistent. I think the only reliable way is `orderStatus` (`PartiallyFilledCanceled` or `Filled`)
 
 
 # TODO
 
-* profit > 0.001
-    * compare all price * qty and choose the lowest money to put in as the first trade
+* topic `oder.spot` might not notify order status due to unknown reason
+    * use order history endpoint to chceck
 * graceful shutdown
 * mysql to store the process of trade
 * Add unit test

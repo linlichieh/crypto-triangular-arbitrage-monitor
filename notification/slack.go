@@ -115,6 +115,7 @@ func (s *Slack) HandleChannelSystemLogs() {
 				continue
 			}
 			go s.SendToChannel(s.ChannelMap[SLACK_CHANNEL_SYSTEM_LOGS].Name, combinedMsg)
+			log.Println(combinedMsg)
 
 			// Reset the combined message
 			combinedMsg = ""

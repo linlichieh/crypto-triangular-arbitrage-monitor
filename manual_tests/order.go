@@ -28,12 +28,10 @@ func main() {
 
 	sym := flag.String("sym", "BTCUSDT", "")
 
+	limit := flag.Int("limit", 1, "")
+
 	// Parse the flags.
 	flag.Parse()
-
-	if *sym == "" {
-		*sym = "BTCUSDT"
-	}
 
 	switch *action {
 	case trade.SIDE_BUY, trade.SIDE_SELL:
@@ -52,7 +50,7 @@ func main() {
 		allSymbols()
 	case "order_history":
 		loadEnvConfig("")
-		orderHistory()
+		orderHistory(*limit)
 	default:
 		log.Fatalf("action '%s' not supported", *action)
 	}
@@ -182,6 +180,8 @@ func trii(qty string) {
 	log.Printf("Done! %s -> %s", decimalQty.String(), tradeQty.String())
 
 	// TODO some issues with ETHUSDT -> ETHBTC -> BTCUSDT
+	// TODO order.spot might miss to notfiy order status, need to check by myself via order history api
+	// TODO retry logic for cancelled
 }
 
 // TESTNET doesn't have MNTBTC, use prod bybit host
@@ -317,9 +317,9 @@ func allSymbols() {
 	fmt.Println(syms)
 }
 
-func orderHistory() {
+func orderHistory(limit int) {
 	api := bybit.InitApi()
-	resp, err := api.GetOrderHistory()
+	resp, err := api.GetOrderHistory(limit)
 	if err != nil {
 		log.Println("err:", err)
 		return
