@@ -22,3 +22,6 @@ all_symbols:
 	go run manual_tests/order.go --action="all_symbols"
 trii:
 	go run manual_tests/order.go --action="trii" --qty=$(qty)
+order_history:
+	go run manual_tests/order.go --action="order_history"
+

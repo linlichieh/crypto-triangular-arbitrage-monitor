@@ -5,6 +5,7 @@ import (
 	"crypto-triangular-arbitrage-watch/tri"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -13,9 +14,10 @@ import (
 )
 
 const (
-	TIMEOUT_SECOND      = 3
-	ORDER_ENDPOINT      = "/v5/order/create"
-	INSTRUMENT_ENDPOINT = "/v5/market/instruments-info"
+	TIMEOUT_SECOND         = 3
+	ORDER_ENDPOINT         = "/v5/order/create"
+	INSTRUMENT_ENDPOINT    = "/v5/market/instruments-info"
+	ORDER_HISTORY_ENDPOINT = "/v5/order/history"
 )
 
 type Api struct {
@@ -118,7 +120,10 @@ func (api *Api) PlaceOrder(side string, symbol string, qty decimal.Decimal) (res
 	}
 
 	// Format qty with precision (bybit's limit)
-	instrument := api.Tri.SymbolInstrumentMap[symbol]
+	instrument, ok := api.Tri.SymbolInstrumentMap[symbol]
+	if !ok {
+		return resp, fmt.Errorf("instrument '%s' doesn't exist", symbol)
+	}
 	var precisionQty decimal.Decimal
 	switch side {
 	case trade.SIDE_BUY:
@@ -160,6 +165,14 @@ func (api *Api) GetInstrumentsInfo(symbol string) (resp *InstrumentResp, err err
 	return
 }
 
+func (api *Api) GetOrderHistory() (resp []byte, err error) {
+	params := map[string]string{
+		"category": trade.CATEGORY_SPOT,
+	}
+	resp, err = api.get(ORDER_HISTORY_ENDPOINT, params)
+	return
+}
+
 func qtyWithPrecision(qty decimal.Decimal, precision string) (decimal.Decimal, error) {
 	// Define the precision as the number of decimal places
 	num, err := precisionToNum(precision)
@@ -168,8 +181,8 @@ func qtyWithPrecision(qty decimal.Decimal, precision string) (decimal.Decimal, e
 	}
 
 	// Format the quantity with the desired precision
-	formattedQty := truncateDecimal(qty, num)
-	return formattedQty, nil
+	convertedQty := truncateDecimal(qty, num)
+	return convertedQty, nil
 }
 
 // 0.000001 -> 6

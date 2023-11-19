@@ -56,6 +56,9 @@ DEBUG_PRINT_MOST_PROFIT: true
 
 # Manual test
 
+* testnet doesn't seem to support all orderbooks.
+* If no one trades BTCUSDT, ETHUSDT or BTCETH, combination calculation won't be conducted. Then there is no output for 'watch'.
+
 Run (optional, it's just for receiving order status)
 
     make run
@@ -85,6 +88,10 @@ Test tri trade
 All symbols
 
     make all_symbols
+
+Get order history
+
+    make order_history
 
 # Bybit API response
 
@@ -129,10 +136,6 @@ wallet
 
     {"id":"100401071d62a16b0-cc3a-41d7-b473-086b6cde0036","topic":"wallet","creationTime":1699764599844,"data":[{"accountIMRate":"0","accountMMRate":"0","totalEquity":"100.27419876","totalWalletBalance":"99.70879947","totalMarginBalance":"99.70879947","totalAvailableBalance":"99.70879947","totalPerpUPL":"0","totalInitialMargin":"0","totalMaintenanceMargin":"0","coin":[{"coin":"USDC","equity":"0","usdValue":"0","walletBalance":"0","availableToWithdraw":"0","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"0","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"},{"coin":"BTC","equity":"0.0003058","usdValue":"11.30798592","walletBalance":"0.0003058","availableToWithdraw":"0.0003058","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"-0.00000619","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"},{"coin":"USDT","equity":"88.94040055","usdValue":"88.96621283","walletBalance":"88.94040055","availableToWithdraw":"88.94040055","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"0","totalPositionIM":"0","totalPositionMM":"0","unrealisedPnl":"0","cumRealisedPnl":"-0.17895808","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0"}],"accountLTV":"0","accountType":"UNIFIED"}]}
 
-# Manual testing issue in testnet
-
-* testnet doesn't seem to support all orderbooks.
-* If no one trades BTCUSDT, ETHUSDT or BTCETH, combination calculation won't be conducted. Then there is no output for 'watch'.
 
 # Calculation
 
@@ -179,6 +182,56 @@ e.g.
     0  ETHUSDT  bid price: 2044.92, bid size: 0.21027, ask price: 2044.93, ask size: 34.85644
     1  ETHBTC  bid price: 0.055166, bid size: 0.388, ask price: 0.055182, ask size: 0.342
     2  BTCUSDT  bid price: 37069.38, bid size: 0.050048, ask price: 37069.39, ask size: 6.355316
+
+# Troubleshooting
+
+### `Order value exceeded lower limit.`
+
+It means that the total value is below the minimum threshold. Solution is trading more value to excceed the threshold
+
+### Order got cancelled
+
+req to spot market sell order
+
+    map[category:spot orderType:Market qty:0.247 side:Sell symbol:ETHBTC]
+
+private channel
+
+    order.spot: {Symbol:ETHBTC Side:Sell CumQty:0.000 CumValue:0.000000000 CumFee:0 Status:Cancelled Type:Market}
+
+order status
+
+      {
+        "symbol": "ETHBTC",
+        "orderType": "Market",
+        "orderLinkId": "1700384547433",
+        "orderId": "1557332891158189568",
+        "cancelType": "UNKNOWN",
+        "orderStatus": "Cancelled",
+        "cumExecValue": "0.000000000",
+        "rejectReason": "EC_ReachRiskPriceLimit",
+        "createdTime": "1700384547549",
+        "updatedTime": "1700384547553",
+        "side": "Sell",
+        "triggerPrice": "0.000000",
+        "cumExecFee": "0",
+        "cumExecQty": "0.000",
+        "reduceOnly": false,
+        "qty": "0.185"
+      }
+
+Reason:
+
+the quantity in the last order of Ask 522 ETH, it seems to cause the huge slippery issue to bybit,
+so bybit doesn't allow this order,
+I guess the internal logic is turning my Market into the limit and add it to the last Ask
+
+Solution:
+
+Use LIMIT order to avoid this situation. For sell order, set the price as the first price in the Bid
+
+Or retry until it works
+
 
 
 # TODO

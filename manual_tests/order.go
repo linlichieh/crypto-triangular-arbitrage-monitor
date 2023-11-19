@@ -50,6 +50,9 @@ func main() {
 		generateInstruments()
 	case "all_symbols":
 		allSymbols()
+	case "order_history":
+		loadEnvConfig("")
+		orderHistory()
 	default:
 		log.Fatalf("action '%s' not supported", *action)
 	}
@@ -145,8 +148,6 @@ func trii(qty string) {
 	}
 
 	// 1st trade
-	// This error `Order value exceeded lower limit.` means that the total value is below the minimum threshold
-	// Solution is putting more money
 	resp, err := api.PlaceOrder(trade.SIDE_BUY, combination.SymbolOrders[0].Symbol, decimalQty)
 	if err != nil {
 		log.Fatal(err)
@@ -314,4 +315,14 @@ func allSymbols() {
 		syms = append(syms, sym.Symbol)
 	}
 	fmt.Println(syms)
+}
+
+func orderHistory() {
+	api := bybit.InitApi()
+	resp, err := api.GetOrderHistory()
+	if err != nil {
+		log.Println("err:", err)
+		return
+	}
+	log.Println(string(resp))
 }
