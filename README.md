@@ -278,13 +278,15 @@ Bybit's response is not very consistent. I think the only reliable way is `order
 
 # TODO
 
-* Add minimum threshold check for symbols and Ask Bis size before making tri-trade
-* Generate instrument for dev and prod separately (because the setting are different e.g. ETHBTC)
-* topic `oder.spot` might not notify order status due to unknown reason
-    * use order history endpoint to chceck
-* graceful shutdown
-* mysql to store the process of trade
-* Add unit test
-* ISSUE: sell response `"cumExecQty":"0.000298"` but it's `0.00029772` on bybit dashboard
-    * minus basePrecision or quotePrecision
-    * https://bybit-exchange.github.io/docs/v5/market/instrument#response-parameters
+* P1
+    * minimum threshold check
+    * 2 ways to check if order is filled
+        * ws `oder.spot`
+        * order history
+    * Tri-trade lock
+* P2
+    * Size of Ask and Bid
+    * graceful shutdown
+* P3
+    * mysql to store the process of trade
+    * Add unit test

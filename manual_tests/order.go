@@ -44,8 +44,8 @@ func main() {
 		loadEnvConfig("prod-config")
 		instrument(*sym)
 	case "generate_instruments":
-		loadEnvConfig("prod-config")
-		generateInstruments()
+		generateInstruments("dev")
+		generateInstruments("prod")
 	case "all_symbols":
 		allSymbols()
 	case "order_history":
@@ -200,9 +200,18 @@ func instrument(sym string) {
 }
 
 // TESTNET doesn't have MNTBTC, use prod bybit host
-func generateInstruments() {
+func generateInstruments(env string) {
+	var configFileName string
 	tri := tri.Init()
-	tri.SetConfigPath("prod-symbol_combinations.json")
+	switch env {
+	case "dev":
+		loadEnvConfig("")
+		configFileName = "symbol_instruments.json"
+	case "prod":
+		loadEnvConfig("prod-config")
+		tri.SetSymCombPath("prod-symbol_combinations.json")
+		configFileName = "prod-symbol_instruments.json"
+	}
 	tri.BuildSymbolCombinations()
 	var allSymbols []string
 	for symbol, _ := range tri.SymbolOrdersMap {
@@ -217,10 +226,14 @@ func generateInstruments() {
 			return
 		}
 		if len(resp.Result.List) > 0 {
-			m := map[string]string{}
-			m["base_precision"] = resp.Result.List[0].LotSizeFilter.BasePrecision
-			m["quote_precision"] = resp.Result.List[0].LotSizeFilter.QuotePrecision
-			result[sym] = m
+			result[sym] = map[string]string{
+				"base_precision":  resp.Result.List[0].LotSizeFilter.BasePrecision,
+				"quote_precision": resp.Result.List[0].LotSizeFilter.QuotePrecision,
+				"min_order_qty":   resp.Result.List[0].LotSizeFilter.MinOrderQty,
+				"max_order_qty":   resp.Result.List[0].LotSizeFilter.MaxOrderQty,
+				"min_order_amt":   resp.Result.List[0].LotSizeFilter.MinOrderAmt,
+				"max_order_amt":   resp.Result.List[0].LotSizeFilter.MaxOrderAmt,
+			}
 		} else {
 			log.Printf("symbol: %s  no list", sym)
 		}
@@ -228,7 +241,7 @@ func generateInstruments() {
 
 	// Write json into file
 	// Create or open the file
-	file, err := os.Create("symbol_instruments.json")
+	file, err := os.Create(configFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -245,7 +258,7 @@ func generateInstruments() {
 		log.Fatal(err)
 	}
 	fmt.Println(result)
-	fmt.Println("'symbol_instruments.json' has been created")
+	fmt.Printf("'%s' has been created\n", configFileName)
 }
 
 // resp:

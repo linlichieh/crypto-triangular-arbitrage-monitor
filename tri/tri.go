@@ -20,7 +20,8 @@ type Tri struct {
 	SymbolInstrumentMap   map[string]*Instrument
 	Slack                 *notification.Slack
 	OrderbookTopics       map[string]string
-	ConfigPath            string
+	SymCombPath           string // symbol_combinations.json
+	SymInstPath           string // symbol_instruments.json
 }
 
 // Combination is a paris of 3 symbols
@@ -53,7 +54,8 @@ func Init() *Tri {
 		SymbolCombinationsMap: make(map[string][]*Combination),
 		SymbolInstrumentMap:   make(map[string]*Instrument),
 		OrderbookTopics:       make(map[string]string),
-		ConfigPath:            "symbol_combinations.json",
+		SymCombPath:           "symbol_combinations.json",
+		SymInstPath:           "symbol_instruments.json",
 	}
 }
 
@@ -67,8 +69,8 @@ func (tri *Tri) SetSlack(slack *notification.Slack) {
 	tri.Slack = slack
 }
 
-func (tri *Tri) SetConfigPath(path string) {
-	tri.ConfigPath = path
+func (tri *Tri) SetSymCombPath(path string) {
+	tri.SymCombPath = path
 }
 
 func (tri *Tri) BuildSymbolCombinations() {
@@ -107,7 +109,7 @@ func (tri *Tri) BuildSymbolCombinations() {
 }
 
 func (tri *Tri) loadSymbolsJson() map[string]interface{} {
-	body, err := os.ReadFile(tri.ConfigPath)
+	body, err := os.ReadFile(tri.SymCombPath)
 	if err != nil {
 		log.Fatalf("Error reading JSON file: %v", err)
 	}
@@ -120,7 +122,7 @@ func (tri *Tri) loadSymbolsJson() map[string]interface{} {
 }
 
 func (tri *Tri) BuildInstruments() {
-	body, err := os.ReadFile("symbol_instruments.json")
+	body, err := os.ReadFile(tri.SymInstPath)
 	if err != nil {
 		log.Fatalf("Error reading JSON file: %v", err)
 	}

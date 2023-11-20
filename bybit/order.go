@@ -120,7 +120,7 @@ func (api *Api) PlaceOrder(side string, symbol string, qty decimal.Decimal) (res
 		return
 	}
 
-	// Format qty with precision (bybit's limit)
+	// Convert qty to valid amount with precision (bybit's requirement)
 	instrument, ok := api.Tri.SymbolInstrumentMap[symbol]
 	if !ok {
 		return resp, fmt.Errorf("instrument '%s' doesn't exist", symbol)
