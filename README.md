@@ -147,7 +147,7 @@ BTCUSDT (base: BTC, quote: USDT)
 
     BTC = USDT / ask.price
 
-ETHBTC (base: ETH, quote: BTC)
+ETHBTC (base: ETH, quote: BTC) (BUY)
 
     ETH = BTC / ask.price
 
@@ -170,7 +170,7 @@ ETHUSDT (base: ETH, quote: USDT)
 
     ETH = USDT / ask.price
 
-ETHBTC (base: ETH, quote: BTC)
+ETHBTC (base: ETH, quote: BTC) (SELL)
 
     BTC = ETH * bid.price
 
@@ -186,6 +186,11 @@ e.g.
     2  BTCUSDT  bid price: 37069.38, bid size: 0.050048, ask price: 37069.39, ask size: 6.355316
 
 # Further explaination for terms in Bybit API
+
+### Bid vs Ask
+
+* Bid: The bid price is the highest price that a buyer (or buyers) is willing to pay for an asset
+* Ask: The lowest price at which a seller (or sellers) is willing to sell their asset.
 
 ### symbol instrument - minOrderQty vs maxOrderQty vs minOrderAmt vs maxOrderAmt
 
@@ -285,7 +290,7 @@ Bybit's response is not very consistent. I think the only reliable way is `order
         * order history
     * Tri-trade lock
 * P2
-    * Size of Ask and Bid
+    * Size of Ask and Bid check
     * graceful shutdown
 * P3
     * mysql to store the process of trade

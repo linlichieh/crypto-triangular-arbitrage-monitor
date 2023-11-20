@@ -252,13 +252,27 @@ func (or *OrderbookRunner) handleSystemLogsMsgs() {
 }
 
 func (p *MostProfit) tradeMsg() string {
+	var SecondTradeTotal decimal.Decimal
+	// var SecondTradeSize decimal.Decimal
+	if p.Combination.BaseQuote {
+		// SecondTradeSize = p.Combination.SymbolOrders[1].Bid.Size
+		// ETH -> BTC (SELL) -> bid size -> find the lowest price to buy eth
+		SecondTradeTotal = p.Combination.SymbolOrders[1].Bid.Size.Mul(p.Combination.SymbolOrders[0].Ask.Price)
+	} else {
+		// SecondTradeSize = p.Combination.SymbolOrders[1].Ask.Size
+		// BTC -> ETH (BUY) -> ask size -> find  the lowest price to buy btc
+		SecondTradeTotal = p.Combination.SymbolOrders[1].Ask.Size.Mul(p.Combination.SymbolOrders[2].Ask.Price)
+	}
 	return fmt.Sprintf(
-		"%s->%s  [%s]  %s -> %s -> %s",
+		"%s->%s  [%s]  %s ($%s) -> %s ($%s) -> %s ($%s)",
 		decimal.NewFromInt(CAPITAL).String(),
 		p.RemainingBalance.StringFixed(1),
 		p.Symbol,
 		p.Combination.SymbolOrders[0].Symbol,
+		p.Combination.SymbolOrders[0].Ask.Price.Mul(p.Combination.SymbolOrders[0].Ask.Size).StringFixed(0),
 		p.Combination.SymbolOrders[1].Symbol,
+		SecondTradeTotal.StringFixed(0),
 		p.Combination.SymbolOrders[2].Symbol,
+		p.Combination.SymbolOrders[2].Bid.Price.Mul(p.Combination.SymbolOrders[2].Bid.Size).StringFixed(0),
 	)
 }
