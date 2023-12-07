@@ -252,8 +252,8 @@ func (p *MostProfit) eachTradeExceedsTotalThreshold() bool {
 	threshold := decimal.NewFromInt(300)
 
 	firstTrade := p.Combination.SymbolOrders[0].Ask.Price.Mul(p.Combination.SymbolOrders[0].Ask.Size)
-	if firstTrade.GreaterThanOrEqual(threshold) {
-		return true
+	if firstTrade.LessThan(threshold) {
+		return false
 	}
 
 	var secondTrade decimal.Decimal
@@ -267,12 +267,12 @@ func (p *MostProfit) eachTradeExceedsTotalThreshold() bool {
 		// BTC -> ETH (BUY) -> ask size -> find  the lowest price to buy btc
 		secondTrade = p.Combination.SymbolOrders[1].Ask.Size.Mul(p.Combination.SymbolOrders[2].Ask.Price)
 	}
-	if secondTrade.GreaterThanOrEqual(threshold) {
-		return true
+	if secondTrade.LessThan(threshold) {
+		return false
 	}
 
 	thirdTrade := p.Combination.SymbolOrders[2].Bid.Price.Mul(p.Combination.SymbolOrders[2].Bid.Size)
-	return thirdTrade.GreaterThanOrEqual(threshold)
+	return thirdTrade.LessThan(threshold)
 }
 
 func (p *MostProfit) tradeMsg() string {
