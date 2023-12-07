@@ -177,17 +177,7 @@ func (or *OrderbookRunner) calculateTriangularArbitrage(symbol string, listener 
 		}
 	}
 
-	// TODO Calculate how much money to put in
-	// fmt.Println()
-	// fmt.Println("baseQuote: ", mostProfit.Combination.BaseQuote)
-	// fmt.Printf("0  %s  bid price: %s, bid size: %s, ask price: %s, ask size: %s\n", mostProfit.Combination.SymbolOrders[0].Symbol, mostProfit.Combination.SymbolOrders[0].Bid.Price, mostProfit.Combination.SymbolOrders[0].Bid.Size, mostProfit.Combination.SymbolOrders[0].Ask.Price, mostProfit.Combination.SymbolOrders[0].Ask.Size)
-	// fmt.Printf("1  %s  bid price: %s, bid size: %s, ask price: %s, ask size: %s\n", mostProfit.Combination.SymbolOrders[1].Symbol, mostProfit.Combination.SymbolOrders[1].Bid.Price, mostProfit.Combination.SymbolOrders[1].Bid.Size, mostProfit.Combination.SymbolOrders[1].Ask.Price, mostProfit.Combination.SymbolOrders[1].Ask.Size)
-	// fmt.Printf("2  %s  bid price: %s, bid size: %s, ask price: %s, ask size: %s\n", mostProfit.Combination.SymbolOrders[2].Symbol, mostProfit.Combination.SymbolOrders[2].Bid.Price, mostProfit.Combination.SymbolOrders[2].Bid.Size, mostProfit.Combination.SymbolOrders[2].Ask.Price, mostProfit.Combination.SymbolOrders[2].Ask.Size)
-	// fmt.Println()
-
-	capital := decimal.NewFromInt(CAPITAL)
-	profitPercent := mostProfit.RemainingBalance.Sub(capital).Div(capital)
-	if profitPercent.GreaterThanOrEqual(decimal.NewFromFloat(TARGET_PROFIT_FOR_TRADE)) {
+	if mostProfit.exceedsProfitThreshold() && mostProfit.eachTradeExceedsTotalThreshold() {
 		listener.lastTimeOfTriArbFound = time.Now()
 		or.ChannelWatch <- &mostProfit
 	}
@@ -249,6 +239,40 @@ func (or *OrderbookRunner) handleSystemLogsMsgs() {
 			counters = make(map[string]int64)
 		}
 	}
+}
+
+func (p *MostProfit) exceedsProfitThreshold() bool {
+	capital := decimal.NewFromInt(CAPITAL)
+	profitPercent := p.RemainingBalance.Sub(capital).Div(capital)
+	return profitPercent.GreaterThanOrEqual(decimal.NewFromFloat(TARGET_PROFIT_FOR_TRADE))
+}
+
+func (p *MostProfit) eachTradeExceedsTotalThreshold() bool {
+	// TODO 300 dollars
+	threshold := decimal.NewFromInt(300)
+
+	firstTrade := p.Combination.SymbolOrders[0].Ask.Price.Mul(p.Combination.SymbolOrders[0].Ask.Size)
+	if firstTrade.GreaterThanOrEqual(threshold) {
+		return true
+	}
+
+	var secondTrade decimal.Decimal
+	// var SecondTradeSize decimal.Decimal
+	if p.Combination.BaseQuote {
+		// SecondTradeSize = p.Combination.SymbolOrders[1].Bid.Size
+		// ETH -> BTC (SELL) -> bid size -> find the lowest price to buy eth
+		secondTrade = p.Combination.SymbolOrders[1].Bid.Size.Mul(p.Combination.SymbolOrders[0].Ask.Price)
+	} else {
+		// SecondTradeSize = p.Combination.SymbolOrders[1].Ask.Size
+		// BTC -> ETH (BUY) -> ask size -> find  the lowest price to buy btc
+		secondTrade = p.Combination.SymbolOrders[1].Ask.Size.Mul(p.Combination.SymbolOrders[2].Ask.Price)
+	}
+	if secondTrade.GreaterThanOrEqual(threshold) {
+		return true
+	}
+
+	thirdTrade := p.Combination.SymbolOrders[2].Bid.Price.Mul(p.Combination.SymbolOrders[2].Bid.Size)
+	return thirdTrade.GreaterThanOrEqual(threshold)
 }
 
 func (p *MostProfit) tradeMsg() string {
