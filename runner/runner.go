@@ -272,7 +272,7 @@ func (p *MostProfit) eachTradeExceedsTotalThreshold() bool {
 	}
 
 	thirdTrade := p.Combination.SymbolOrders[2].Bid.Price.Mul(p.Combination.SymbolOrders[2].Bid.Size)
-	return thirdTrade.LessThan(threshold)
+	return !thirdTrade.LessThan(threshold)
 }
 
 func (p *MostProfit) tradeMsg() string {
