@@ -1,6 +1,14 @@
+# DEPRECATED
+
+This is an experimental repo and no longer maintained.
+
+There's not much chance for making money through triangular arbitrage in crypto trading.
+
 # Introduction
 
 This is a Go application for real-time detection of triangular arbitrage opportunities in cryptocurrency markets.
+
+![Notification screenshot](notification-screenshot.png)
 
 ### Features
 
